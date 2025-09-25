@@ -1,0 +1,40 @@
+{
+  "name": "@gtelots/react-map-gl",
+  "version": "1.0.0",
+  "private": true,
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "gl-matrix": "^3.4.4",
+    "gsap": "^3.13.0",
+    "react-map-gl": "^7.1.8",
+    "three": "0.168.0",
+    "threebox-plugin": "https://github.com/laragis/threebox#9fa64a8cf417bbb06337167e81060a7187eb70b8"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^24.1.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@types/three": "^0.168.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.2"
+  },
+  "peerDependencies": {
+    "mapbox-gl": ">=3.5.0",
+    "maplibre-gl": "4.7.1",
+    "react": ">=19.1.0",
+    "react-dom": ">=19.1.0"
+  }
+}
