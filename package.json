@@ -20,7 +20,7 @@
     "gsap": "^3.13.0",
     "react-map-gl": "^7.1.8",
     "three": "0.168.0",
-    "threebox-plugin": "https://github.com/laragis/threebox#9fa64a8cf417bbb06337167e81060a7187eb70b8"
+    "threebox-plugin": "https://github.com/laragis/threebox#647b9f0569203cb03507ec748b8b7853b11b66eb"
   },
   "devDependencies": {
     "@types/geojson": "^7946.0.16",
