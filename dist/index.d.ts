@@ -1,10 +1,10 @@
-import * as react_map_gl from 'react-map-gl';
-import { PopupEvent } from 'react-map-gl';
 export * from 'react-map-gl';
 import * as React$1 from 'react';
 import * as maplibre_gl from 'maplibre-gl';
 import { CustomLayerInterface, Popup, PopupOptions, Map } from 'maplibre-gl';
 export { CustomLayerInterface as CustomLayerOptions, CustomRenderMethodInput as CustomRenderOptions, Map as MapboxInstance } from 'maplibre-gl';
+import * as react_map_gl_dist_esm_exports_maplibre from 'react-map-gl/dist/esm/exports-maplibre';
+import { PopupEvent } from 'react-map-gl/maplibre';
 import { Threebox as Threebox$1 } from 'threebox-plugin';
 export { Threebox as ThreeboxInstance } from 'threebox-plugin';
 import * as THREE from 'three';
@@ -51,8 +51,8 @@ declare const PopupAnimation: React$1.NamedExoticComponent<maplibre_gl.PopupOpti
     longitude: number;
     latitude: number;
     style?: React$1.CSSProperties;
-    onOpen?: (e: react_map_gl.PopupEvent) => void;
-    onClose?: (e: react_map_gl.PopupEvent) => void;
+    onOpen?: (e: react_map_gl_dist_esm_exports_maplibre.PopupEvent) => void;
+    onClose?: (e: react_map_gl_dist_esm_exports_maplibre.PopupEvent) => void;
     children?: React$1.ReactNode;
 } & React$1.RefAttributes<AnimatedPopup>>;
 
