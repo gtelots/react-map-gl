@@ -1,7 +1,7 @@
 'use client'
 
 // src/index.tsx
-export * from "react-map-gl";
+export * from "react-map-gl/maplibre";
 
 // src/modules/react-maplibre/components/custom-layer.tsx
 import * as React from "react";

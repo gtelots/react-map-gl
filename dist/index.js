@@ -51,7 +51,7 @@ __export(index_exports, {
   useThreebox: () => useThreebox
 });
 module.exports = __toCommonJS(index_exports);
-__reExport(index_exports, require("react-map-gl"), module.exports);
+__reExport(index_exports, require("react-map-gl/maplibre"), module.exports);
 
 // src/modules/react-maplibre/components/custom-layer.tsx
 var React = __toESM(require("react"));
@@ -3200,6 +3200,6 @@ var THREE14 = require("three");
   ThreeboxLayer,
   ThreeboxProvider,
   useThreebox,
-  ...require("react-map-gl")
+  ...require("react-map-gl/maplibre")
 });
 //# sourceMappingURL=index.js.map
