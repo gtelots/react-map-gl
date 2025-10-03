@@ -2696,10 +2696,10 @@ var EffectManager = class {
     this.props = props;
     if (map) {
       this._map = map;
-      this.initialize(map);
+      this._initialize(map);
     }
   }
-  initialize(map) {
+  _initialize(map) {
     map.addLayer({
       id: "effect-layer",
       type: "custom",
@@ -2711,7 +2711,7 @@ var EffectManager = class {
   }
   destroy() {
     this._onRemove();
-    if (this._map) {
+    if (this._map && this._map.style?._loaded && this._map.getLayer("effect-layer")) {
       this._map.removeLayer("effect-layer");
       this._map = null;
     }
