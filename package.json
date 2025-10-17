@@ -16,6 +16,7 @@
     "build": "tsup"
   },
   "dependencies": {
+    "@turf/turf": "^7.2.0",
     "gl-matrix": "^3.4.4",
     "gsap": "^3.13.0",
     "react-map-gl": "^7.1.8",

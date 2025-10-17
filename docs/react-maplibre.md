@@ -68,6 +68,26 @@ import { PopupAnimation } from '@gtelots/react-map-gl';
 </PopupAnimation>;
 ```
 
+### LineAnimation
+
+A component that provides animated line drawing functionality for MapLibre maps.
+
+#### Props
+
+| Property  | Type     | Required | Description                                             |
+| --------- | -------- | -------- | ------------------------------------------------------- |
+| `map`     | `Map`    | ✓        | MapLibre map instance                                   |
+| `layerId` | `string` | ✓        | ID of the line layer to animate                         |
+| `speed`   | `number` |          | Animation speed (recommended range: 1-100, default: 50) |
+
+#### Usage Example
+
+```tsx
+import { useLineAnimation } from '@gtelots/react-map-gl';
+
+useLineAnimation({ map, layerId: 'my-line-layer', speed: 50 });
+```
+
 ## Integration with Map
 
 The react-maplibre components are designed to work within the broader map ecosystem. They should be used inside a `Map` context.

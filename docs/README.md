@@ -189,7 +189,7 @@ function MyMapApp() {
 
 ### 📋 [React MapLibre](./react-maplibre.md)
 
-Learn about custom layers, popup animations, and MapLibre integration.
+Learn about custom layers, popup animations, line animations, and MapLibre integration.
 
 ### 🎯 [React Threebox](./react-threebox.md)
 

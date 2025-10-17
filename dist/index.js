@@ -48,6 +48,7 @@ __export(index_exports, {
   ThreeboxInstance: () => import_threebox_plugin.Threebox,
   ThreeboxLayer: () => ThreeboxLayer,
   ThreeboxProvider: () => ThreeboxProvider,
+  useLineAnimation: () => useLineAnimation,
   useThreebox: () => useThreebox
 });
 module.exports = __toCommonJS(index_exports);
@@ -620,8 +621,67 @@ var _PopupAnimation = React3.forwardRef((props, ref) => {
 });
 var PopupAnimation = React3.memo(_PopupAnimation);
 
-// src/modules/react-maplibre/types/lib.ts
+// src/modules/react-maplibre/components/use-line-animation.tsx
 var import_maplibre_gl2 = require("maplibre-gl");
+var import_react2 = require("react");
+var dashArraySequence = [
+  [0, 4, 3],
+  [0.5, 4, 2.5],
+  [1, 4, 2],
+  [1.5, 4, 1.5],
+  [2, 4, 1],
+  [2.5, 4, 0.5],
+  [3, 4, 0],
+  [0, 0.5, 3, 3.5],
+  [0, 1, 3, 3],
+  [0, 1.5, 3, 2.5],
+  [0, 2, 3, 2],
+  [0, 2.5, 3, 1.5],
+  [0, 3, 3, 1],
+  [0, 3.5, 3, 0.5]
+];
+function animateDashArray(map, layerId, speed) {
+  let step = 0;
+  function animateDashArray2(timestamp) {
+    const newStep = Math.floor(timestamp / speed % dashArraySequence.length);
+    if (newStep !== step && map.getLayer(layerId)) {
+      map.setPaintProperty(layerId, "line-dasharray", dashArraySequence[step]);
+      step = newStep;
+    }
+    requestAnimationFrame(animateDashArray2);
+  }
+  animateDashArray2(0);
+}
+var useLineAnimation = ({ map, layerId, speed = 50 }) => {
+  const lineAnimation = (0, import_react2.useCallback)(() => {
+    if (!map) return;
+    const layer = map.getLayer(layerId);
+    if (!layer) {
+      throw new Error(`Layer ${layerId} not found`);
+    }
+    if (layer?.type !== "line") {
+      throw new Error(`Layer ${layerId} is not a line layer`);
+    }
+    const waitForLayer = () => {
+      if (map.getLayer(layerId)) {
+        animateDashArray(map, layerId, speed);
+      } else {
+        setTimeout(waitForLayer, 100);
+      }
+    };
+    waitForLayer();
+  }, [map, layerId, speed]);
+  (0, import_react2.useEffect)(() => {
+    map?.on("style.load", lineAnimation);
+    return () => {
+      map?.off("style.load", lineAnimation);
+    };
+  }, [map, lineAnimation]);
+  return {};
+};
+
+// src/modules/react-maplibre/types/lib.ts
+var import_maplibre_gl3 = require("maplibre-gl");
 
 // src/modules/react-threebox/components/threebox-layer.tsx
 var React6 = __toESM(require("react"));
@@ -3199,6 +3259,7 @@ var THREE14 = require("three");
   ThreeboxInstance,
   ThreeboxLayer,
   ThreeboxProvider,
+  useLineAnimation,
   useThreebox,
   ...require("react-map-gl/maplibre")
 });

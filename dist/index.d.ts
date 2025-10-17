@@ -2,7 +2,7 @@ import { PopupEvent } from 'react-map-gl/maplibre';
 export * from 'react-map-gl/maplibre';
 import * as React$1 from 'react';
 import * as maplibre_gl from 'maplibre-gl';
-import { CustomLayerInterface, Popup, PopupOptions, Map } from 'maplibre-gl';
+import { CustomLayerInterface, Popup, Map, PopupOptions } from 'maplibre-gl';
 export { CustomLayerInterface as CustomLayerOptions, CustomRenderMethodInput as CustomRenderOptions, Map as MapboxInstance } from 'maplibre-gl';
 import * as react_map_gl_dist_esm_exports_maplibre from 'react-map-gl/dist/esm/exports-maplibre';
 import { Threebox as Threebox$1 } from 'threebox-plugin';
@@ -55,6 +55,18 @@ declare const PopupAnimation: React$1.NamedExoticComponent<maplibre_gl.PopupOpti
     onClose?: (e: react_map_gl_dist_esm_exports_maplibre.PopupEvent) => void;
     children?: React$1.ReactNode;
 } & React$1.RefAttributes<AnimatedPopup>>;
+
+type LineAnimationProps = {
+    map: Map;
+    layerId: string;
+    speed?: number;
+};
+/**
+ * Hook to animate dash array for line.
+ * @param map Mapbox map instance
+ * @param layerId Layer id to animate
+ */
+declare const useLineAnimation: ({ map, layerId, speed }: LineAnimationProps) => {};
 
 /**
  * Props for the Popup component.
@@ -541,4 +553,4 @@ declare const _WallMesh: React$1.FC<WallMeshProps>;
 declare const _WallGeometry: React$1.FC<ExtrudeWallGeometryParams>;
 declare const _WallMaterial: React$1.FC<ExtrudeWallMaterialParams>;
 
-export { _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, CustomLayer, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, type ModelTypes, type ModelUnits, PopupAnimation, type PopupAnimationProps, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useThreebox };
+export { _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, CustomLayer, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, type ModelTypes, type ModelUnits, PopupAnimation, type PopupAnimationProps, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useLineAnimation, useThreebox };

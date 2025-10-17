@@ -570,6 +570,65 @@ var _PopupAnimation = React3.forwardRef((props, ref) => {
 });
 var PopupAnimation = React3.memo(_PopupAnimation);
 
+// src/modules/react-maplibre/components/use-line-animation.tsx
+import "maplibre-gl";
+import { useCallback as useCallback2, useEffect as useEffect4 } from "react";
+var dashArraySequence = [
+  [0, 4, 3],
+  [0.5, 4, 2.5],
+  [1, 4, 2],
+  [1.5, 4, 1.5],
+  [2, 4, 1],
+  [2.5, 4, 0.5],
+  [3, 4, 0],
+  [0, 0.5, 3, 3.5],
+  [0, 1, 3, 3],
+  [0, 1.5, 3, 2.5],
+  [0, 2, 3, 2],
+  [0, 2.5, 3, 1.5],
+  [0, 3, 3, 1],
+  [0, 3.5, 3, 0.5]
+];
+function animateDashArray(map, layerId, speed) {
+  let step = 0;
+  function animateDashArray2(timestamp) {
+    const newStep = Math.floor(timestamp / speed % dashArraySequence.length);
+    if (newStep !== step && map.getLayer(layerId)) {
+      map.setPaintProperty(layerId, "line-dasharray", dashArraySequence[step]);
+      step = newStep;
+    }
+    requestAnimationFrame(animateDashArray2);
+  }
+  animateDashArray2(0);
+}
+var useLineAnimation = ({ map, layerId, speed = 50 }) => {
+  const lineAnimation = useCallback2(() => {
+    if (!map) return;
+    const layer = map.getLayer(layerId);
+    if (!layer) {
+      throw new Error(`Layer ${layerId} not found`);
+    }
+    if (layer?.type !== "line") {
+      throw new Error(`Layer ${layerId} is not a line layer`);
+    }
+    const waitForLayer = () => {
+      if (map.getLayer(layerId)) {
+        animateDashArray(map, layerId, speed);
+      } else {
+        setTimeout(waitForLayer, 100);
+      }
+    };
+    waitForLayer();
+  }, [map, layerId, speed]);
+  useEffect4(() => {
+    map?.on("style.load", lineAnimation);
+    return () => {
+      map?.off("style.load", lineAnimation);
+    };
+  }, [map, lineAnimation]);
+  return {};
+};
+
 // src/modules/react-maplibre/types/lib.ts
 import "maplibre-gl";
 
@@ -3158,6 +3217,7 @@ export {
   Threebox as ThreeboxInstance,
   ThreeboxLayer,
   ThreeboxProvider,
+  useLineAnimation,
   useThreebox
 };
 //# sourceMappingURL=index.mjs.map
