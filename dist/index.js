@@ -655,15 +655,12 @@ function animateDashArray(map, layerId, speed) {
 var useLineAnimation = ({ map, layerId, speed = 50 }) => {
   const lineAnimation = (0, import_react2.useCallback)(() => {
     if (!map) return;
-    const layer = map.getLayer(layerId);
-    if (!layer) {
-      throw new Error(`Layer ${layerId} not found`);
-    }
-    if (layer?.type !== "line") {
-      throw new Error(`Layer ${layerId} is not a line layer`);
-    }
     const waitForLayer = () => {
-      if (map.getLayer(layerId)) {
+      const layer = map.getLayer(layerId);
+      if (layer) {
+        if (layer.type !== "line") {
+          throw new Error(`Layer ${layerId} is not a line layer`);
+        }
         animateDashArray(map, layerId, speed);
       } else {
         setTimeout(waitForLayer, 100);
@@ -943,8 +940,7 @@ var ThreeboxLayer = ({ id, beforeId, children }) => {
 
 // src/modules/react-threebox/components/model-loader.tsx
 var React7 = __toESM(require("react"));
-var import_react_dom2 = require("react-dom");
-var updateModel = (tb, props, prevProps, model) => {
+var updateModel = (model, props, prevProps) => {
   assert(props.id === prevProps.id, "model id changed");
   if (props.type !== prevProps.type || props.obj !== prevProps.obj || props.units !== prevProps.units) {
     console.warn("Model properties changed, reloading the model");
@@ -955,16 +951,7 @@ var updateModel = (tb, props, prevProps, model) => {
     model.setRotationAxis(props.rotation);
   }
   if (!deepEqual(props.scale, prevProps.scale)) {
-    const unitsPerMeter = Number(model.unitsPerMeter);
-    if (typeof props.scale === "number") {
-      const s = unitsPerMeter * props.scale;
-      model.scale.set(s, s, s);
-    } else if (typeof props.scale === "object") {
-      const newScale = Object.fromEntries(
-        Object.entries(props.scale).map(([key, value]) => [key, unitsPerMeter * value])
-      );
-      model.scale.set(newScale.x, newScale.y, newScale.z);
-    }
+    model.setScale(props.scale);
   }
   if (props.anchor !== prevProps.anchor) {
     model.setAnchor(props.anchor);
@@ -975,29 +962,21 @@ var updateModel = (tb, props, prevProps, model) => {
   model.userData.model = { ...props };
   return model;
 };
-var updateDupModels = (tb, props, prevProps, dupModelsRef) => {
-  dupModelsRef.current.forEach((dupModel, key) => {
-    try {
-      const id = props.id;
-      if (dupModel?.userData?.model?.id === id) {
-        updateModel(tb, props, prevProps, dupModel);
-      }
-    } catch (e) {
-      console.warn(`Error updating duplicate model ${key}:`, e);
-    }
-  });
-};
 var createModel = async (tb, props) => {
   if (tb) {
     const model = await tb.loadObj(props);
     model.userData.model = { ...props };
-    model.userData.isRendered = false;
     return model;
   }
   return null;
 };
 var getModelById = (tb, id) => {
   return tb?.world.children.find((child) => {
+    return child.userData.model.id === id;
+  });
+};
+var getModelsById = (tb, id) => {
+  return tb?.world.children.filter((child) => {
     return child.userData.model.id === id;
   });
 };
@@ -1022,7 +1001,6 @@ var ModelLoader = ({
   const { threebox, map } = React7.useContext(ThreeboxContext) || {};
   const tb = threebox?.getThreebox();
   const propsRef = React7.useRef({});
-  const dupModelsRef = React7.useRef(/* @__PURE__ */ new Map());
   const [modelInstance, setModelInstance] = React7.useState(null);
   const loaderProps = React7.useMemo(() => {
     const newProps = { ...props };
@@ -1046,38 +1024,16 @@ var ModelLoader = ({
     props.type,
     props.units
   ]);
-  const cleanupDupModels = React7.useCallback(() => {
-    dupModelsRef.current.forEach((dupModel) => {
-      try {
-        dupModel.dispose();
-      } catch (e) {
-        console.warn("Error disposing duplicate model:", e);
-      }
-    });
-    dupModelsRef.current.clear();
-  }, []);
   const loadModel = React7.useCallback(async () => {
     if (!tb) return;
     const id = loaderProps.id;
     let model = map && map.style && map.style._loaded && getModelById(tb, id);
-    let needsNewDupModels = false;
     try {
       if (model) {
-        model = updateModel(tb, loaderProps, propsRef.current, model);
-        if (model) {
-          updateDupModels(tb, loaderProps, propsRef.current, dupModelsRef);
-        } else {
-          model = await createModel(tb, loaderProps);
-          needsNewDupModels = true;
-        }
+        const models = getModelsById(tb, id);
+        models.forEach((m) => updateModel(m, loaderProps, propsRef.current));
       } else {
         model = await createModel(tb, loaderProps);
-        needsNewDupModels = true;
-      }
-      if (needsNewDupModels) {
-        cleanupDupModels();
-        (0, import_react_dom2.flushSync)(() => setModelInstance(null));
-        setModelInstance(model);
       }
       onLoad?.(model);
       propsRef.current = loaderProps;
@@ -1085,33 +1041,16 @@ var ModelLoader = ({
       console.error(`Error loading model ${id}:`, error);
       onError?.(error);
     } finally {
-      if (!needsNewDupModels) {
-        setModelInstance(model || null);
-      }
+      setModelInstance(model || null);
     }
-  }, [tb, map, loaderProps, onLoad, onError, cleanupDupModels]);
+  }, [tb, map, loaderProps, onLoad, onError]);
   React7.useEffect(() => {
     loadModel();
   }, [loadModel]);
-  React7.useEffect(() => {
-    return () => {
-      cleanupDupModels();
-    };
-  }, [cleanupDupModels]);
   const childrenWithModel = React7.useMemo(() => {
-    if (!modelInstance) {
-      return null;
-    }
-    return React7.Children.map(children, (child) => {
+    return modelInstance && React7.Children.map(children, (child) => {
       if (child && React7.isValidElement(child)) {
-        const childProps = child.props;
-        const childKey = childProps.id || child.key;
-        let dupModel = dupModelsRef.current.get(childKey);
-        if (!dupModel) {
-          dupModel = modelInstance?.duplicate();
-          dupModelsRef.current.set(childKey, dupModel);
-        }
-        return React7.cloneElement(child, { model: dupModel });
+        return React7.cloneElement(child, { model: modelInstance });
       }
       return child;
     });
@@ -1165,8 +1104,9 @@ var addModel = (tb, props, model) => {
     }, 100);
   }
 };
-var rerenderModel = (tb, props, prevProps, defaultProps3, model) => {
+var rerenderModel = (model, props, prevProps, defaultProps3) => {
   model.name = props.id;
+  model.userData.id = props.id;
   model = updateProperties(props, prevProps, defaultProps3, model, propertyNames);
   if (props.coords && !deepEqual(props.coords, prevProps.coords)) {
     model.setCoords(props.coords);
@@ -1202,7 +1142,6 @@ var rerenderModel = (tb, props, prevProps, defaultProps3, model) => {
   }
 };
 var defaultProps2 = {
-  id: Math.random().toString(36).substring(2, 9),
   wireframe: false,
   visibility: true,
   hidden: false
@@ -1212,6 +1151,8 @@ var ModelRenderer = ({ model, onRender, ...props }) => {
   const { layerId } = React8.useContext(ThreeboxLayerContext) || {};
   const tb = threebox?.getThreebox();
   const propsRef = React8.useRef({});
+  const { current: modelRef } = React8.useRef(model.duplicate());
+  const isRendered = React8.useRef(false);
   const renderProps = React8.useMemo(
     () => ({
       ...defaultProps2,
@@ -1220,27 +1161,31 @@ var ModelRenderer = ({ model, onRender, ...props }) => {
     }),
     [props, layerId]
   );
-  use_isomorphic_layout_effect_default(() => {
-    if (model) {
-      rerenderModel(tb, renderProps, propsRef.current, defaultProps2, model);
-      const isRendered = model.userData.isRendered;
-      if (!isRendered) {
-        addModel(tb, renderProps, model);
-        model.userData.isRendered = true;
-        onRender?.(model);
+  React8.useEffect(() => {
+    if (map) {
+      return () => {
+        if (tb && modelRef) {
+          tb.remove(modelRef);
+          propsRef.current = {};
+          isRendered.current = false;
+        }
+      };
+    }
+    return void 0;
+  }, [map]);
+  React8.useEffect(() => {
+    if (modelRef) {
+      rerenderModel(modelRef, renderProps, propsRef.current, defaultProps2);
+      if (!isRendered.current && tb) {
+        addModel(tb, renderProps, modelRef);
+        onRender?.(modelRef);
+        isRendered.current = true;
       }
     } else {
       throw new Error("Model not found in Threebox instance.");
     }
     propsRef.current = renderProps;
-  }, [tb, model, onRender, renderProps]);
-  React8.useEffect(() => {
-    return () => {
-      if (tb) {
-        tb.removeByName(props.id);
-      }
-    };
-  }, [tb, props.id, map]);
+  }, [tb, renderProps, onRender]);
   return null;
 };
 
