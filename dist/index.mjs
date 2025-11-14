@@ -1102,14 +1102,13 @@ var ModelRenderer = ({ model, onRender, ...props }) => {
   const propsRef = React8.useRef({});
   const { current: modelRef } = React8.useRef(model.duplicate());
   const isRendered = React8.useRef(false);
-  const renderProps = React8.useMemo(
-    () => ({
+  const renderProps = React8.useMemo(() => {
+    return {
       ...defaultProps2,
       ...props,
       layerId
-    }),
-    [props, layerId]
-  );
+    };
+  }, [props, layerId]);
   React8.useEffect(() => {
     if (map) {
       return () => {
@@ -2664,6 +2663,10 @@ var EffectManager = class {
     }
   }
   _initialize(map) {
+    if (!map.style?._loaded) {
+      map.on("style.load", () => this._initialize(map));
+      return;
+    }
     map.addLayer({
       id: "effect-layer",
       type: "custom",
