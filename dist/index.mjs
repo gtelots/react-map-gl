@@ -2659,14 +2659,14 @@ var EffectManager = class {
     this.props = props;
     if (map) {
       this._map = map;
-      this._initialize(map);
+      if (map.style?._loaded) {
+        this._initialize(map);
+        return;
+      }
+      map.on("style.load", () => this._initialize(map));
     }
   }
   _initialize(map) {
-    if (!map.style?._loaded) {
-      map.on("style.load", () => this._initialize(map));
-      return;
-    }
     map.addLayer({
       id: "effect-layer",
       type: "custom",
