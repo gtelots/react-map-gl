@@ -169,6 +169,7 @@ Renders multiple models efficiently.
   path: [[lng, lat, alt], [lng, lat, alt], ...],
   duration: 1000,
   trackHeading: true,
+  loop: false,
 }
 ```
 

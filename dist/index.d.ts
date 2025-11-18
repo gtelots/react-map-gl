@@ -226,6 +226,10 @@ type ModelRendererOptions = {
          * @default true
          */
         trackHeading?: boolean;
+        /** Whether to loop the path animation
+         * @default false
+         */
+        loop?: boolean;
     };
     /** This get/set property receives and returns a boolean value to convert an THREE.Object3D in wireframes or texture it. */
     wireframe?: boolean;
@@ -292,10 +296,9 @@ type ModelRendererOptions = {
     onObjectMouseOut?: (e: any) => void;
     /**
      * Callback function called when the object finishes following a path.
-     * @param e Event object containing details about the path finish event.
      * @returns
      */
-    onFollowPathFinish?: (e: any) => void;
+    onFollowPathFinish?: () => void;
 };
 type ModelBatchItem = {
     /** ModelLoader props */

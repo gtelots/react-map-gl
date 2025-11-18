@@ -1123,7 +1123,15 @@ var rerenderModel = (model, props, prevProps, defaultProps3) => {
     model.stop();
   }
   if (props.pathOptions && !deepEqual(props.pathOptions, prevProps.pathOptions)) {
-    model.followPath(props.pathOptions, props.onFollowPathFinish);
+    if (!props.pathOptions.loop) {
+      model.followPath(props.pathOptions, props.onFollowPathFinish);
+      return;
+    }
+    const pathLoop = () => {
+      props.onFollowPathFinish?.();
+      model.followPath(props.pathOptions, pathLoop);
+    };
+    model.followPath(props.pathOptions, pathLoop);
   } else if (!props.pathOptions && prevProps.pathOptions) {
     model.stop();
   }
