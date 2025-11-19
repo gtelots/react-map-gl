@@ -1043,7 +1043,7 @@ var ModelLoader = ({
     } finally {
       setModelInstance(model || null);
     }
-  }, [tb, map, loaderProps, onLoad, onError]);
+  }, [tb, map, loaderProps]);
   React7.useEffect(() => {
     loadModel();
   }, [loadModel]);
@@ -1123,15 +1123,11 @@ var rerenderModel = (model, props, prevProps, defaultProps3) => {
     model.stop();
   }
   if (props.pathOptions && !deepEqual(props.pathOptions, prevProps.pathOptions)) {
-    if (!props.pathOptions.loop) {
-      model.followPath(props.pathOptions, props.onFollowPathFinish);
-      return;
-    }
-    const pathLoop = () => {
+    const finishCb = () => {
       props.onFollowPathFinish?.();
-      model.followPath(props.pathOptions, pathLoop);
+      if (props.pathOptions?.loop) model.followPath(props.pathOptions, finishCb);
     };
-    model.followPath(props.pathOptions, pathLoop);
+    model.followPath(props.pathOptions, finishCb);
   } else if (!props.pathOptions && prevProps.pathOptions) {
     model.stop();
   }
@@ -1154,8 +1150,13 @@ var defaultProps2 = {
   visibility: true,
   hidden: false
 };
-var ModelRenderer = ({ model, onRender, ...props }) => {
-  const { threebox, map } = React8.useContext(ThreeboxContext) || {};
+var ModelRenderer = ({
+  model,
+  onRender,
+  onError,
+  ...props
+}) => {
+  const { threebox } = React8.useContext(ThreeboxContext) || {};
   const { layerId } = React8.useContext(ThreeboxLayerContext) || {};
   const tb = threebox?.getThreebox();
   const propsRef = React8.useRef({});
@@ -1169,30 +1170,37 @@ var ModelRenderer = ({ model, onRender, ...props }) => {
     };
   }, [props, layerId]);
   React8.useEffect(() => {
-    if (map) {
+    if (tb && modelRef) {
       return () => {
-        if (tb && modelRef) {
-          tb.remove(modelRef);
+        try {
+          tb.removeByName(modelRef.name);
           propsRef.current = {};
           isRendered.current = false;
+        } catch (error) {
+          console.error(`Error removing model ${modelRef.name}:`, error);
         }
       };
     }
     return void 0;
-  }, [map]);
+  }, [tb]);
   React8.useEffect(() => {
     if (modelRef) {
-      rerenderModel(modelRef, renderProps, propsRef.current, defaultProps2);
-      if (!isRendered.current && tb) {
-        addModel(tb, renderProps, modelRef);
-        onRender?.(modelRef);
-        isRendered.current = true;
+      try {
+        rerenderModel(modelRef, renderProps, propsRef.current, defaultProps2);
+        if (!isRendered.current && tb) {
+          addModel(tb, renderProps, modelRef);
+          onRender?.(modelRef);
+          isRendered.current = true;
+        }
+      } catch (error) {
+        console.error(`Error rendering model ${renderProps.id}:`, error);
+        onError?.(error);
       }
     } else {
       throw new Error("Model not found in Threebox instance.");
     }
     propsRef.current = renderProps;
-  }, [tb, renderProps, onRender]);
+  }, [tb, renderProps]);
   return null;
 };
 

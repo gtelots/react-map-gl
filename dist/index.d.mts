@@ -2,7 +2,7 @@ import { PopupEvent } from 'react-map-gl/maplibre';
 export * from 'react-map-gl/maplibre';
 import * as React$1 from 'react';
 import * as maplibre_gl from 'maplibre-gl';
-import { CustomLayerInterface, Popup, Map, PopupOptions } from 'maplibre-gl';
+import { CustomLayerInterface, Popup, Map, PopupOptions, FilterSpecification, DataDrivenPropertyValueSpecification } from 'maplibre-gl';
 export { CustomLayerInterface as CustomLayerOptions, CustomRenderMethodInput as CustomRenderOptions, Map as MapboxInstance } from 'maplibre-gl';
 import * as react_map_gl_dist_esm_exports_maplibre from 'react-map-gl/dist/esm/exports-maplibre';
 import { Threebox as Threebox$1 } from 'threebox-plugin';
@@ -306,6 +306,34 @@ type ModelBatchItem = {
     /** Array of ModelRenderer props - one loader can render multiple instances */
     renderers: ModelRendererOptions[];
 };
+type ModelSouceOptions = {
+    id: string;
+    url?: string;
+    tiles?: string[];
+    minzoom?: number;
+    maxzoom?: number;
+};
+type ModelLayerSpecification = {
+    id: string;
+    beforeId?: string;
+    source?: string;
+    'source-layer'?: string;
+    filter?: FilterSpecification;
+    minzoom?: number;
+    maxzoom?: number;
+    batchsize?: number;
+    batchdelay?: number;
+    layout?: {
+        'model-id'?: string;
+        'model-url'?: string;
+        visibility?: boolean;
+    };
+    paint?: {
+        'model-scale'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
+        'model-rotation'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
+        'model-translation'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
+    };
+};
 
 type ModelLoaderProps = ModelLoaderOptions & {
     children?: React$1.ReactNode;
@@ -318,6 +346,7 @@ type ModelRendererProps = ModelRendererOptions & {
     model?: any;
     layerId?: string;
     onRender?: (model: any) => void;
+    onError?: (error: any) => void;
 };
 declare const ModelRenderer: React$1.FC<ModelRendererProps>;
 
@@ -556,4 +585,4 @@ declare const _WallMesh: React$1.FC<WallMeshProps>;
 declare const _WallGeometry: React$1.FC<ExtrudeWallGeometryParams>;
 declare const _WallMaterial: React$1.FC<ExtrudeWallMaterialParams>;
 
-export { _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, CustomLayer, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, type ModelTypes, type ModelUnits, PopupAnimation, type PopupAnimationProps, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useLineAnimation, useThreebox };
+export { _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, CustomLayer, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, type ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, type ModelSouceOptions, type ModelTypes, type ModelUnits, PopupAnimation, type PopupAnimationProps, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useLineAnimation, useThreebox };
