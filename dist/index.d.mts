@@ -1,8 +1,9 @@
 import { PopupEvent } from 'react-map-gl/maplibre';
 export * from 'react-map-gl/maplibre';
 import * as React$1 from 'react';
+import React__default from 'react';
 import * as maplibre_gl from 'maplibre-gl';
-import { CustomLayerInterface, Popup, Map, PopupOptions, FilterSpecification, DataDrivenPropertyValueSpecification } from 'maplibre-gl';
+import { CustomLayerInterface, Popup, Map, PopupOptions, FilterSpecification, DataDrivenPropertyValueSpecification as DataDrivenPropertyValueSpecification$1 } from 'maplibre-gl';
 export { CustomLayerInterface as CustomLayerOptions, CustomRenderMethodInput as CustomRenderOptions, Map as MapboxInstance } from 'maplibre-gl';
 import * as react_map_gl_dist_esm_exports_maplibre from 'react-map-gl/dist/esm/exports-maplibre';
 import { Threebox as Threebox$1 } from 'threebox-plugin';
@@ -313,7 +314,7 @@ type ModelSouceOptions = {
     minzoom?: number;
     maxzoom?: number;
 };
-type ModelLayerSpecification = {
+type ModelLayerSpecification$1 = {
     id: string;
     beforeId?: string;
     source?: string;
@@ -329,9 +330,9 @@ type ModelLayerSpecification = {
         visibility?: boolean;
     };
     paint?: {
-        'model-scale'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
-        'model-rotation'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
-        'model-translation'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
+        'model-scale'?: DataDrivenPropertyValueSpecification$1<[number, number, number]>;
+        'model-rotation'?: DataDrivenPropertyValueSpecification$1<[number, number, number]>;
+        'model-translation'?: DataDrivenPropertyValueSpecification$1<[number, number, number]>;
     };
 };
 
@@ -356,6 +357,58 @@ interface ModelBatcherProps {
     batchDelay?: number;
 }
 declare const ModelBatcher: React$1.FC<ModelBatcherProps>;
+
+/**
+ * Type definitions vendored from @maplibre/maplibre-gl-style-spec
+ * These types are needed for the custom model layer implementation
+ *
+ * Source: mapbox-gl-js/src/style-spec/
+ */
+
+type DataDrivenPropertyValueSpecification<T> = T | ExpressionSpecificationArray;
+/**
+ * Expression specification (array format)
+ * Examples: ['get', 'property'], ['case', condition, value1, value2, default]
+ */
+type ExpressionSpecificationArray = Array<unknown>;
+/**
+ * Model specifications
+ */
+type ModelSouceSpecification = {
+    id: string;
+    url?: string;
+    tiles?: string[];
+    minzoom?: number;
+    maxzoom?: number;
+};
+type ModelLayerSpecification = {
+    id: string;
+    beforeId?: string;
+    source?: string;
+    'source-layer'?: string;
+    filter?: FilterSpecification;
+    minzoom?: number;
+    maxzoom?: number;
+    batchsize?: number;
+    batchdelay?: number;
+    layout?: {
+        'model-id'?: string;
+        visibility?: boolean;
+    };
+    paint?: {
+        'model-scale'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
+        'model-rotation'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
+        'model-translation'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
+    };
+};
+
+type ModelSourceProps = ModelSouceSpecification & {
+    children?: React__default.ReactNode;
+};
+declare const ModelSource: React__default.FC<ModelSourceProps>;
+
+type ModelLayerProps = ModelLayerSpecification & {};
+declare const ModelLayer: React__default.FC<ModelLayerProps>;
 
 type ThreeboxPluginOptions = {
     /** Whether to add some default lighting to the scene. If no lighting added, most objects in the scene will render as black
@@ -585,4 +638,4 @@ declare const _WallMesh: React$1.FC<WallMeshProps>;
 declare const _WallGeometry: React$1.FC<ExtrudeWallGeometryParams>;
 declare const _WallMaterial: React$1.FC<ExtrudeWallMaterialParams>;
 
-export { _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, CustomLayer, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, type ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, type ModelSouceOptions, type ModelTypes, type ModelUnits, PopupAnimation, type PopupAnimationProps, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useLineAnimation, useThreebox };
+export { _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, CustomLayer, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, ModelLayer, type ModelLayerSpecification$1 as ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, type ModelSouceOptions, ModelSource, type ModelTypes, type ModelUnits, PopupAnimation, type PopupAnimationProps, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useLineAnimation, useThreebox };

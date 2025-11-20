@@ -41,8 +41,10 @@ __export(index_exports, {
   ExtrudeWallGeometry: () => _WallGeometry,
   ExtrudeWallMaterial: () => _WallMaterial,
   ModelBatcher: () => ModelBatcher,
+  ModelLayer: () => ModelLayer,
   ModelLoader: () => ModelLoader,
   ModelRenderer: () => ModelRenderer,
+  ModelSource: () => ModelSource,
   PopupAnimation: () => PopupAnimation,
   Threebox: () => Threebox2,
   ThreeboxInstance: () => import_threebox_plugin.Threebox,
@@ -1263,9 +1265,373 @@ var ModelBatcher = ({
   ));
 };
 
-// src/modules/react-threejs/components/effect-canvas.tsx
-var React10 = __toESM(require("react"));
+// src/modules/react-threebox/components/model-source.tsx
+var import_react3 = require("react");
 var import_maplibre4 = require("react-map-gl/maplibre");
+var import_jsx_runtime5 = require("react/jsx-runtime");
+var ModelSource = ({ children, ...props }) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_maplibre4.Source, { type: "vector", ...props, children });
+};
+
+// src/modules/react-threebox/components/model-layer.tsx
+var import_react5 = __toESM(require("react"));
+var import_maplibre5 = require("react-map-gl/maplibre");
+
+// src/modules/react-threebox/style-spec/model-layer-properties.ts
+var modelLayoutProperties = {
+  "model-id": {
+    type: "string",
+    "property-type": "data-driven",
+    expression: {
+      interpolated: false,
+      parameters: ["zoom", "feature"]
+    },
+    default: ""
+  },
+  "visibility": {
+    type: "enum",
+    "property-type": "data-constant",
+    values: {
+      "visible": {},
+      "none": {}
+    },
+    default: "visible",
+    expression: {
+      interpolated: false,
+      parameters: ["zoom"]
+    }
+  }
+};
+var modelPaintProperties = {
+  "model-scale": {
+    type: "number",
+    "property-type": "data-driven",
+    expression: {
+      interpolated: true,
+      parameters: ["zoom", "feature"]
+    },
+    transition: true
+  },
+  "model-rotation": {
+    type: "number",
+    "property-type": "data-driven",
+    expression: {
+      interpolated: true,
+      parameters: ["zoom", "feature"]
+    },
+    transition: true
+  },
+  "model-translation": {
+    type: "number",
+    "property-type": "data-driven",
+    expression: {
+      interpolated: true,
+      parameters: ["zoom", "feature"]
+    },
+    transition: true
+  }
+};
+
+// src/modules/react-threebox/style-spec/model-property-evaluator.ts
+var import_maplibre_gl_style_spec = require("@maplibre/maplibre-gl-style-spec");
+function evaluateProperty(compiled, globals, feature) {
+  try {
+    if (Array.isArray(compiled.expression)) {
+      const results = compiled.expression.map((expr) => {
+        const value = expr.evaluate(globals, feature);
+        if (Array.isArray(value)) {
+          return value[0];
+        } else if (value !== null && value !== void 0) {
+          return value;
+        } else {
+          return compiled.defaultValue;
+        }
+      });
+      return results;
+    } else {
+      const result = compiled.expression.evaluate(globals, feature);
+      if (result === null || result === void 0) {
+        return compiled.defaultValue;
+      }
+      return result;
+    }
+  } catch (error) {
+    console.warn("Error evaluating property:", error);
+    return compiled.defaultValue;
+  }
+}
+function normalizeArrayValue(value, defaultValue) {
+  if (value === void 0) {
+    return defaultValue;
+  }
+  if (typeof value === "number") {
+    return Array(defaultValue.length).fill(value);
+  }
+  if (Array.isArray(value)) {
+    const hasExpression = value.some((v) => Array.isArray(v) && typeof v[0] === "string");
+    if (hasExpression) {
+      return value;
+    }
+    return value;
+  }
+  return value;
+}
+var ModelPropertyEvaluator = class {
+  layoutExpressions;
+  paintExpressions;
+  constructor(layout, paint) {
+    this.layoutExpressions = /* @__PURE__ */ new Map();
+    this.paintExpressions = /* @__PURE__ */ new Map();
+    if (layout) {
+      for (const [key, value] of Object.entries(layout)) {
+        const spec = modelLayoutProperties[key];
+        if (spec) {
+          this.layoutExpressions.set(key, this.compileProperty(value, spec));
+        }
+      }
+    }
+    if (paint) {
+      for (const [key, value] of Object.entries(paint)) {
+        const spec = modelPaintProperties[key];
+        if (spec) {
+          let normalizedValue = value;
+          if (key === "model-scale" || key === "model-rotation" || key === "model-translation") {
+            normalizedValue = normalizeArrayValue(
+              value,
+              spec.default
+            );
+          }
+          this.paintExpressions.set(key, this.compileProperty(normalizedValue, spec));
+        }
+      }
+    }
+  }
+  /**
+   * Compiles a property value into an evaluatable expression
+   */
+  compileProperty(value, specification) {
+    if (Array.isArray(value) && value.some((v) => Array.isArray(v) && typeof v[0] === "string")) {
+      const expressions = value.map((expr) => {
+        return (0, import_maplibre_gl_style_spec.normalizePropertyExpression)(
+          expr,
+          specification
+        );
+      });
+      return {
+        specification,
+        expression: expressions,
+        defaultValue: specification.default
+      };
+    }
+    const expression = (0, import_maplibre_gl_style_spec.normalizePropertyExpression)(
+      value,
+      specification
+    );
+    return {
+      specification,
+      expression,
+      defaultValue: specification.default
+    };
+  }
+  /**
+   * Evaluates all layout properties for a feature
+   */
+  evaluateLayout(globals, feature) {
+    const result = {};
+    for (const [key, compiled] of this.layoutExpressions) {
+      result[key] = evaluateProperty(
+        compiled,
+        globals,
+        feature
+      );
+    }
+    return result;
+  }
+  /**
+   * Evaluates all paint properties for a feature
+   */
+  evaluatePaint(globals, feature) {
+    const result = {};
+    for (const [key, compiled] of this.paintExpressions) {
+      result[key] = evaluateProperty(
+        compiled,
+        globals,
+        feature
+      );
+    }
+    return result;
+  }
+  /**
+   * Evaluates a specific layout property for a feature
+   */
+  evaluateLayoutProperty(propertyName, globals, feature) {
+    const compiled = this.layoutExpressions.get(propertyName);
+    if (!compiled) {
+      return void 0;
+    }
+    return evaluateProperty(compiled, globals, feature);
+  }
+  /**
+   * Evaluates a specific paint property for a feature
+   */
+  evaluatePaintProperty(propertyName, globals, feature) {
+    const compiled = this.paintExpressions.get(propertyName);
+    if (!compiled) {
+      return void 0;
+    }
+    return evaluateProperty(compiled, globals, feature);
+  }
+};
+
+// src/modules/react-threebox/style-spec/model-layer-validator.ts
+var import_maplibre_gl_style_spec2 = require("@maplibre/maplibre-gl-style-spec");
+
+// src/utils/use-debounce-callback.ts
+var import_react4 = require("react");
+var useDebounceCallback = (callback, delay) => {
+  const timeoutRef = (0, import_react4.useRef)(null);
+  const callbackRef = (0, import_react4.useRef)(callback);
+  (0, import_react4.useEffect)(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+  (0, import_react4.useEffect)(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+  const debouncedCallback = (0, import_react4.useCallback)(
+    (...args) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        callbackRef.current(...args);
+      }, delay);
+    },
+    [delay]
+  );
+  return debouncedCallback;
+};
+
+// src/modules/react-threebox/components/model-layer.tsx
+var import_jsx_runtime6 = require("react/jsx-runtime");
+var transformLoader = (item) => ({
+  id: item.model,
+  type: "glb",
+  obj: item.model,
+  scale: { x: item.scale[0], y: item.scale[1], z: item.scale[2] },
+  onLoad: (model) => {
+    let meshCount = 0;
+    model.traverse((child) => {
+      if (child.isMesh) meshCount++;
+    });
+    console.log("Mesh count:", meshCount);
+  }
+});
+var transformRenderer = (item) => ({
+  id: item.id,
+  coords: [item.geometry.coordinates[0], item.geometry.coordinates[1]],
+  rotation: { x: item.rotation[0], y: item.rotation[1], z: item.rotation[2] },
+  renderingEffect: { duration: 500 },
+  onRender: (model) => {
+    model.hidden = false;
+  }
+});
+var ModelLayer = (props) => {
+  const { batchsize = 10, batchdelay = 100, layout, paint, ...layerProps } = props;
+  const { map } = import_react5.default.useContext(ThreeboxContext) || {};
+  const id = import_react5.default.useMemo(() => props.id ? `threebox-${props.id}` : "", [props.id]);
+  const [styleLoaded, setStyleLoaded] = import_react5.default.useState(0);
+  const [modelsInViewBox, setModelsInViewBox] = import_react5.default.useState([]);
+  import_react5.default.useEffect(() => {
+    const forceUpdate = () => setStyleLoaded((version) => version + 1);
+    map?.on("styledata", forceUpdate);
+    map?.on("sourcedata", forceUpdate);
+    forceUpdate();
+    return () => {
+      map?.off("styledata", forceUpdate);
+      map?.off("sourcedata", forceUpdate);
+    };
+  }, [map]);
+  const evaluator = import_react5.default.useMemo(() => {
+    return new ModelPropertyEvaluator(layout, paint);
+  }, [layout, paint]);
+  const processFeature = import_react5.default.useCallback(
+    (feature, global) => {
+      const layoutProps = evaluator.evaluateLayout(global, feature);
+      const paintProps = evaluator.evaluatePaint(global, feature);
+      return {
+        // Feature identification
+        id: feature.id || feature.properties.id,
+        model: layoutProps["model-id"],
+        visible: layoutProps["visibility"] === "visible",
+        // Transform properties
+        scale: paintProps["model-scale"] || [1, 1, 1],
+        rotation: paintProps["model-rotation"] || [0, 0, 0],
+        translation: paintProps["model-translation"] || [0, 0, 0],
+        // Original feature for reference
+        properties: feature.properties,
+        geometry: feature.geometry
+      };
+    },
+    [evaluator]
+  );
+  const processFeatures = import_react5.default.useCallback(
+    (features) => {
+      if (!map) return [];
+      const zoom = map.getZoom();
+      const pitch = map.getPitch();
+      const global = { zoom, pitch };
+      return features.map((feature) => processFeature(feature, global));
+    },
+    [map, processFeature]
+  );
+  const queryModelsInViewBox = useDebounceCallback(
+    import_react5.default.useCallback(() => {
+      if (!map) return;
+      const features = map.queryRenderedFeatures({ layers: [props.id] });
+      const models = processFeatures(features);
+      setModelsInViewBox(models);
+    }, [map, processFeatures]),
+    500
+  );
+  import_react5.default.useEffect(() => {
+    queryModelsInViewBox();
+  }, [queryModelsInViewBox]);
+  import_react5.default.useEffect(() => {
+    map?.on("moveend", queryModelsInViewBox);
+    return () => {
+      map?.off("moveend", queryModelsInViewBox);
+    };
+  }, [map, queryModelsInViewBox]);
+  const modelItems = import_react5.default.useMemo(() => {
+    if (!modelsInViewBox.length) return [];
+    const modelMap = /* @__PURE__ */ new Map();
+    modelsInViewBox.forEach((item) => {
+      const renderer2 = transformRenderer(item);
+      if (modelMap.has(item.model)) {
+        modelMap.get(item.model).renderers.push(renderer2);
+      } else {
+        const newItem = {
+          loader: transformLoader(item),
+          renderers: [renderer2]
+        };
+        modelMap.set(item.model, newItem);
+      }
+    });
+    return Array.from(modelMap.values());
+  }, [modelsInViewBox]);
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_react5.default.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_maplibre5.Layer, { type: "fill", ...layerProps }),
+    styleLoaded > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ThreeboxLayer, { id, beforeId: props.beforeId, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ModelBatcher, { models: modelItems, batchSize: batchsize, batchDelay: batchdelay }) })
+  ] });
+};
+
+// src/modules/react-threejs/components/effect-canvas.tsx
+var React12 = __toESM(require("react"));
+var import_maplibre6 = require("react-map-gl/maplibre");
 
 // src/modules/react-threejs/threejs/graphics/effect-manager.ts
 var THREE8 = require("three");
@@ -2814,16 +3180,16 @@ var EffectManager = class {
 };
 
 // src/modules/react-threejs/components/effect-canvas.tsx
-var import_jsx_runtime5 = require("react/jsx-runtime");
-var EffectCanvasContext = React10.createContext(null);
+var import_jsx_runtime7 = require("react/jsx-runtime");
+var EffectCanvasContext = React12.createContext(null);
 var _EffectCanvas = (props, ref) => {
   const { id, mapId, children, onError, onLoad, ...options } = props;
-  const mapRef = (0, import_maplibre4.useMap)();
-  const [effectManager, setEffectManager] = React10.useState(null);
-  const optionsRef = React10.useRef(options);
-  const { current: contextValue } = React10.useRef({});
-  const canvasOptions = React10.useMemo(() => options, [Object.values(options).join(",")]);
-  React10.useEffect(() => {
+  const mapRef = (0, import_maplibre6.useMap)();
+  const [effectManager, setEffectManager] = React12.useState(null);
+  const optionsRef = React12.useRef(options);
+  const { current: contextValue } = React12.useRef({});
+  const canvasOptions = React12.useMemo(() => options, [Object.values(options).join(",")]);
+  React12.useEffect(() => {
     let isMounted = true;
     let effectInstance = null;
     const mapInstance = mapRef?.[mapId || "current"]?.getMap();
@@ -2868,13 +3234,13 @@ var _EffectCanvas = (props, ref) => {
       optionsRef.current = options;
     }
   }, [options, effectManager]);
-  React10.useImperativeHandle(ref, () => contextValue, [effectManager]);
-  return effectManager && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(EffectCanvasContext.Provider, { value: contextValue, children });
+  React12.useImperativeHandle(ref, () => contextValue, [effectManager]);
+  return effectManager && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(EffectCanvasContext.Provider, { value: contextValue, children });
 };
-var EffectCanvas = React10.forwardRef(_EffectCanvas);
+var EffectCanvas = React12.forwardRef(_EffectCanvas);
 
 // src/modules/react-threejs/components/bloom-line.tsx
-var React11 = __toESM(require("react"));
+var React13 = __toESM(require("react"));
 
 // src/modules/react-threejs/threejs/objects/bloom-line/bloom-line-geometry.ts
 var THREE9 = __toESM(require("three"));
@@ -2936,12 +3302,12 @@ var BloomLine = class extends import_Line2.Line2 {
 };
 
 // src/modules/react-threejs/components/bloom-line.tsx
-var import_jsx_runtime6 = require("react/jsx-runtime");
-var MeshContext = React11.createContext({ mesh: null });
+var import_jsx_runtime8 = require("react/jsx-runtime");
+var MeshContext = React13.createContext({ mesh: null });
 var _LineMesh = ({ children }) => {
-  const { group, bloom } = React11.useContext(EffectCanvasContext) || {};
-  const [mesh] = React11.useState(new BloomLine());
-  React11.useEffect(() => {
+  const { group, bloom } = React13.useContext(EffectCanvasContext) || {};
+  const [mesh] = React13.useState(new BloomLine());
+  React13.useEffect(() => {
     if (mesh && group && bloom) {
       try {
         group.add(mesh);
@@ -2957,13 +3323,13 @@ var _LineMesh = ({ children }) => {
       }
     };
   }, [mesh, group, bloom]);
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(MeshContext.Provider, { value: { mesh }, children });
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MeshContext.Provider, { value: { mesh }, children });
 };
 var _LineGeometry = (props) => {
-  const { mesh } = React11.useContext(MeshContext) || {};
-  const [geometry] = React11.useState(new BloomLineGeometry());
-  const memorizedProps = React11.useMemo(() => props, [props.geometry?.join(",")]);
-  React11.useEffect(() => {
+  const { mesh } = React13.useContext(MeshContext) || {};
+  const [geometry] = React13.useState(new BloomLineGeometry());
+  const memorizedProps = React13.useMemo(() => props, [props.geometry?.join(",")]);
+  React13.useEffect(() => {
     if (mesh && geometry) {
       if (mesh.geometry) {
         mesh.geometry.dispose();
@@ -2987,10 +3353,10 @@ var _LineGeometry = (props) => {
   return null;
 };
 var _LineMaterial = (props) => {
-  const { mesh } = React11.useContext(MeshContext) || {};
-  const [material] = React11.useState(new BloomLineMaterial(props));
-  const memorizedProps = React11.useMemo(() => props, [Object.values(props).join(",")]);
-  React11.useEffect(() => {
+  const { mesh } = React13.useContext(MeshContext) || {};
+  const [material] = React13.useState(new BloomLineMaterial(props));
+  const memorizedProps = React13.useMemo(() => props, [Object.values(props).join(",")]);
+  React13.useEffect(() => {
     if (mesh && material) {
       if (mesh.material) {
         mesh.material.dispose();
@@ -3012,7 +3378,7 @@ var _LineMaterial = (props) => {
 };
 
 // src/modules/react-threejs/components/extrude-wall.tsx
-var React12 = __toESM(require("react"));
+var React14 = __toESM(require("react"));
 
 // src/modules/react-threejs/threejs/objects/extrude-wall/extrude-wall-geometry.ts
 var THREE11 = __toESM(require("three"));
@@ -3128,12 +3494,12 @@ var ExtrudeWall = class extends THREE13.Mesh {
 };
 
 // src/modules/react-threejs/components/extrude-wall.tsx
-var import_jsx_runtime7 = require("react/jsx-runtime");
-var MeshContext2 = React12.createContext({ mesh: null });
+var import_jsx_runtime9 = require("react/jsx-runtime");
+var MeshContext2 = React14.createContext({ mesh: null });
 var _WallMesh = ({ children }) => {
-  const { group, bloom } = React12.useContext(EffectCanvasContext) || {};
-  const [mesh] = React12.useState(new ExtrudeWall());
-  React12.useEffect(() => {
+  const { group, bloom } = React14.useContext(EffectCanvasContext) || {};
+  const [mesh] = React14.useState(new ExtrudeWall());
+  React14.useEffect(() => {
     if (mesh && group && bloom) {
       try {
         group.add(mesh);
@@ -3149,13 +3515,13 @@ var _WallMesh = ({ children }) => {
       }
     };
   }, [mesh, group, bloom]);
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(MeshContext2.Provider, { value: { mesh }, children });
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(MeshContext2.Provider, { value: { mesh }, children });
 };
 var _WallGeometry = (props) => {
-  const { mesh } = React12.useContext(MeshContext2) || {};
-  const [geometry] = React12.useState(new ExtrudeWallGeometry());
-  const memorizedProps = React12.useMemo(() => props, [props.geometry?.join(","), props.height]);
-  React12.useEffect(() => {
+  const { mesh } = React14.useContext(MeshContext2) || {};
+  const [geometry] = React14.useState(new ExtrudeWallGeometry());
+  const memorizedProps = React14.useMemo(() => props, [props.geometry?.join(","), props.height]);
+  React14.useEffect(() => {
     if (mesh && geometry) {
       if (mesh.geometry) {
         mesh.geometry.dispose();
@@ -3179,10 +3545,10 @@ var _WallGeometry = (props) => {
   return null;
 };
 var _WallMaterial = (props) => {
-  const { mesh } = React12.useContext(MeshContext2) || {};
-  const [material] = React12.useState(new ExtrudeWallMaterial(props));
-  const memorizedProps = React12.useMemo(() => props, [Object.values(props).join(",")]);
-  React12.useEffect(() => {
+  const { mesh } = React14.useContext(MeshContext2) || {};
+  const [material] = React14.useState(new ExtrudeWallMaterial(props));
+  const memorizedProps = React14.useMemo(() => props, [Object.values(props).join(",")]);
+  React14.useEffect(() => {
     if (mesh && material) {
       if (mesh.material && !Array.isArray(mesh.material)) {
         mesh.material.dispose();
@@ -3216,8 +3582,10 @@ var THREE14 = require("three");
   ExtrudeWallGeometry,
   ExtrudeWallMaterial,
   ModelBatcher,
+  ModelLayer,
   ModelLoader,
   ModelRenderer,
+  ModelSource,
   PopupAnimation,
   Threebox,
   ThreeboxInstance,
