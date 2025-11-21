@@ -1052,7 +1052,9 @@ var ModelLoader = ({
   const childrenWithModel = React7.useMemo(() => {
     return modelInstance && React7.Children.map(children, (child) => {
       if (child && React7.isValidElement(child)) {
-        return React7.cloneElement(child, { model: modelInstance });
+        return React7.cloneElement(child, {
+          model: modelInstance.duplicate()
+        });
       }
       return child;
     });
@@ -1127,7 +1129,13 @@ var rerenderModel = (model, props, prevProps, defaultProps3) => {
   if (props.pathOptions && !deepEqual(props.pathOptions, prevProps.pathOptions)) {
     const finishCb = () => {
       props.onFollowPathFinish?.();
-      if (props.pathOptions?.loop) model.followPath(props.pathOptions, finishCb);
+      if (props.pathOptions?.loop) {
+        model.followPath(props.pathOptions, finishCb);
+        if (props.animationOptions) {
+          model.playAnimation(props.animationOptions);
+        }
+      }
+      ;
     };
     model.followPath(props.pathOptions, finishCb);
   } else if (!props.pathOptions && prevProps.pathOptions) {
@@ -1162,7 +1170,7 @@ var ModelRenderer = ({
   const { layerId } = React8.useContext(ThreeboxLayerContext) || {};
   const tb = threebox?.getThreebox();
   const propsRef = React8.useRef({});
-  const { current: modelRef } = React8.useRef(model.duplicate());
+  const { current: modelRef } = React8.useRef(model);
   const isRendered = React8.useRef(false);
   const renderProps = React8.useMemo(() => {
     return {
@@ -1548,11 +1556,9 @@ var ModelLayer = (props) => {
   import_react5.default.useEffect(() => {
     const forceUpdate = () => setStyleLoaded((version) => version + 1);
     map?.on("styledata", forceUpdate);
-    map?.on("sourcedata", forceUpdate);
     forceUpdate();
     return () => {
       map?.off("styledata", forceUpdate);
-      map?.off("sourcedata", forceUpdate);
     };
   }, [map]);
   const evaluator = import_react5.default.useMemo(() => {
