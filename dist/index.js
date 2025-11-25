@@ -1036,14 +1036,13 @@ var ModelLoader = ({
         models.forEach((m) => updateModel(m, loaderProps, propsRef.current));
       } else {
         model = await createModel(tb, loaderProps);
+        setModelInstance(model);
       }
       onLoad?.(model);
       propsRef.current = loaderProps;
     } catch (error) {
       console.error(`Error loading model ${id}:`, error);
       onError?.(error);
-    } finally {
-      setModelInstance(model || null);
     }
   }, [tb, map, loaderProps]);
   React7.useEffect(() => {
@@ -1129,13 +1128,8 @@ var rerenderModel = (model, props, prevProps, defaultProps3) => {
   if (props.pathOptions && !deepEqual(props.pathOptions, prevProps.pathOptions)) {
     const finishCb = () => {
       props.onFollowPathFinish?.();
-      if (props.pathOptions?.loop) {
-        model.followPath(props.pathOptions, finishCb);
-        if (props.animationOptions) {
-          model.playAnimation(props.animationOptions);
-        }
-      }
-      ;
+      if (props.animationOptions) model.playAnimation(props.animationOptions);
+      if (props.pathOptions?.loop) model.followPath(props.pathOptions, finishCb);
     };
     model.followPath(props.pathOptions, finishCb);
   } else if (!props.pathOptions && prevProps.pathOptions) {
@@ -1314,6 +1308,7 @@ var modelPaintProperties = {
   "model-scale": {
     type: "number",
     "property-type": "data-driven",
+    default: 1,
     expression: {
       interpolated: true,
       parameters: ["zoom", "feature"]
@@ -1323,6 +1318,7 @@ var modelPaintProperties = {
   "model-rotation": {
     type: "number",
     "property-type": "data-driven",
+    default: 0,
     expression: {
       interpolated: true,
       parameters: ["zoom", "feature"]
@@ -1332,6 +1328,7 @@ var modelPaintProperties = {
   "model-translation": {
     type: "number",
     "property-type": "data-driven",
+    default: 1,
     expression: {
       interpolated: true,
       parameters: ["zoom", "feature"]
@@ -1358,6 +1355,9 @@ function evaluateProperty(compiled, globals, feature) {
       return results;
     } else {
       const result = compiled.expression.evaluate(globals, feature);
+      if (typeof result === "number") {
+        return [result, result, result];
+      }
       if (result === null || result === void 0) {
         return compiled.defaultValue;
       }
@@ -1368,12 +1368,12 @@ function evaluateProperty(compiled, globals, feature) {
     return compiled.defaultValue;
   }
 }
-function normalizeArrayValue(value, defaultValue) {
+function normalizeArrayValue(value, defaultValue, defaultLength = 3) {
   if (value === void 0) {
     return defaultValue;
   }
   if (typeof value === "number") {
-    return Array(defaultValue.length).fill(value);
+    return Array(defaultLength).fill(value);
   }
   if (Array.isArray(value)) {
     const hasExpression = value.some((v) => Array.isArray(v) && typeof v[0] === "string");
@@ -1530,25 +1530,25 @@ var transformLoader = (item) => ({
   type: "glb",
   obj: item.model,
   scale: { x: item.scale[0], y: item.scale[1], z: item.scale[2] },
+  adjustment: { x: item.translation[0], y: item.translation[1], z: item.translation[2] },
   onLoad: (model) => {
     let meshCount = 0;
     model.traverse((child) => {
       if (child.isMesh) meshCount++;
     });
-    console.log("Mesh count:", meshCount);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Mesh count:", meshCount);
+    }
   }
 });
 var transformRenderer = (item) => ({
   id: item.id,
   coords: [item.geometry.coordinates[0], item.geometry.coordinates[1]],
   rotation: { x: item.rotation[0], y: item.rotation[1], z: item.rotation[2] },
-  renderingEffect: { duration: 500 },
-  onRender: (model) => {
-    model.hidden = false;
-  }
+  renderingEffect: { duration: 500 }
 });
 var ModelLayer = (props) => {
-  const { batchsize = 10, batchdelay = 100, layout, paint, ...layerProps } = props;
+  const { layout, paint, ...layerProps } = props;
   const { map } = import_react5.default.useContext(ThreeboxContext) || {};
   const id = import_react5.default.useMemo(() => props.id ? `threebox-${props.id}` : "", [props.id]);
   const [styleLoaded, setStyleLoaded] = import_react5.default.useState(0);
@@ -1605,7 +1605,7 @@ var ModelLayer = (props) => {
   );
   import_react5.default.useEffect(() => {
     queryModelsInViewBox();
-  }, [queryModelsInViewBox]);
+  }, [queryModelsInViewBox, layout, paint]);
   import_react5.default.useEffect(() => {
     map?.on("moveend", queryModelsInViewBox);
     return () => {
@@ -1629,9 +1629,12 @@ var ModelLayer = (props) => {
     });
     return Array.from(modelMap.values());
   }, [modelsInViewBox]);
+  const ModelItems = (0, import_react5.useMemo)(() => {
+    return modelItems.map((model) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ModelLoader, { ...model.loader, children: model.renderers.map((props2) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ModelRenderer, { ...props2 }, props2.id)) }, model.loader.id));
+  }, [modelItems]);
   return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_react5.default.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_maplibre5.Layer, { type: "fill", ...layerProps }),
-    styleLoaded > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ThreeboxLayer, { id, beforeId: props.beforeId, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ModelBatcher, { models: modelItems, batchSize: batchsize, batchDelay: batchdelay }) })
+    styleLoaded > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ThreeboxLayer, { id, beforeId: props.beforeId, children: ModelItems })
   ] });
 };
 

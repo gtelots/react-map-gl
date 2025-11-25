@@ -3,7 +3,7 @@ export * from 'react-map-gl/maplibre';
 import * as React$1 from 'react';
 import React__default from 'react';
 import * as maplibre_gl from 'maplibre-gl';
-import { CustomLayerInterface, Popup, Map, PopupOptions, FilterSpecification, DataDrivenPropertyValueSpecification as DataDrivenPropertyValueSpecification$1 } from 'maplibre-gl';
+import { CustomLayerInterface, Popup, Map, PopupOptions, FilterSpecification } from 'maplibre-gl';
 export { CustomLayerInterface as CustomLayerOptions, CustomRenderMethodInput as CustomRenderOptions, Map as MapboxInstance } from 'maplibre-gl';
 import * as react_map_gl_dist_esm_exports_maplibre from 'react-map-gl/dist/esm/exports-maplibre';
 import { Threebox as Threebox$1 } from 'threebox-plugin';
@@ -125,7 +125,7 @@ type ModelLoaderOptions = {
      * Note that future rotations apply atop this transformation, and do not overwrite it.
      * rotate attribute must be provided in number or per axis
      * (i.e. for an object rotated 90 degrees over the x axis rotation: {x: 90, y: 0, z: 0})
-     * @default { x: 90, y: 180, z: 0 }
+     * @default 0
      */
     rotation?: number | Vector3;
     /** Scale of the object along the three axes, to size it appropriately before future transformations.
@@ -145,7 +145,6 @@ type ModelLoaderOptions = {
      * adjustment param must be provided in units per axis (i.e. adjustment: {x: 0.5, y: 0.5, z: 0}),
      * so the model will correct the center position of the object
      * @default 1
-     * @deprecated Don't use adjustment, use setCoords to move the object instead
      */
     adjustment?: number | Vector3;
     /** This param allows to normalize specular values from some 3D models
@@ -307,34 +306,6 @@ type ModelBatchItem = {
     /** Array of ModelRenderer props - one loader can render multiple instances */
     renderers: ModelRendererOptions[];
 };
-type ModelSouceOptions = {
-    id: string;
-    url?: string;
-    tiles?: string[];
-    minzoom?: number;
-    maxzoom?: number;
-};
-type ModelLayerSpecification$1 = {
-    id: string;
-    beforeId?: string;
-    source?: string;
-    'source-layer'?: string;
-    filter?: FilterSpecification;
-    minzoom?: number;
-    maxzoom?: number;
-    batchsize?: number;
-    batchdelay?: number;
-    layout?: {
-        'model-id'?: string;
-        'model-url'?: string;
-        visibility?: boolean;
-    };
-    paint?: {
-        'model-scale'?: DataDrivenPropertyValueSpecification$1<[number, number, number]>;
-        'model-rotation'?: DataDrivenPropertyValueSpecification$1<[number, number, number]>;
-        'model-translation'?: DataDrivenPropertyValueSpecification$1<[number, number, number]>;
-    };
-};
 
 type ModelLoaderProps = ModelLoaderOptions & {
     children?: React$1.ReactNode;
@@ -389,16 +360,14 @@ type ModelLayerSpecification = {
     filter?: FilterSpecification;
     minzoom?: number;
     maxzoom?: number;
-    batchsize?: number;
-    batchdelay?: number;
     layout?: {
-        'model-id'?: string;
+        'model-id'?: string | ExpressionSpecificationArray;
         visibility?: boolean;
     };
     paint?: {
-        'model-scale'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
-        'model-rotation'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
-        'model-translation'?: DataDrivenPropertyValueSpecification<[number, number, number]>;
+        'model-scale'?: DataDrivenPropertyValueSpecification<number>;
+        'model-rotation'?: DataDrivenPropertyValueSpecification<number>;
+        'model-translation'?: DataDrivenPropertyValueSpecification<number>;
     };
 };
 
@@ -638,4 +607,4 @@ declare const _WallMesh: React$1.FC<WallMeshProps>;
 declare const _WallGeometry: React$1.FC<ExtrudeWallGeometryParams>;
 declare const _WallMaterial: React$1.FC<ExtrudeWallMaterialParams>;
 
-export { _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, CustomLayer, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, ModelLayer, type ModelLayerSpecification$1 as ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, type ModelSouceOptions, ModelSource, type ModelTypes, type ModelUnits, PopupAnimation, type PopupAnimationProps, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useLineAnimation, useThreebox };
+export { _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, CustomLayer, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, ModelLayer, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, ModelSource, type ModelTypes, type ModelUnits, PopupAnimation, type PopupAnimationProps, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useLineAnimation, useThreebox };
