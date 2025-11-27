@@ -921,12 +921,12 @@ var createModel = async (tb, props) => {
 };
 var getModelById = (tb, id) => {
   return tb?.world.children.find((child) => {
-    return child.userData.model.id === id;
+    return child.userData.model?.id === id;
   });
 };
 var getModelsById = (tb, id) => {
   return tb?.world.children.filter((child) => {
-    return child.userData.model.id === id;
+    return child.userData.model?.id === id;
   });
 };
 var modelCounter = 0;
@@ -1155,12 +1155,101 @@ var ModelRenderer = ({
   return null;
 };
 
-// src/modules/react-threebox/components/model-batcher.tsx
+// src/modules/react-threebox/components/label-renderer.tsx
 import * as React9 from "react";
+import * as ReactDOM from "react-dom";
+var addLabel = (tb, props, htmlElement, model) => {
+  if (model) {
+    model.addLabel(htmlElement);
+    return;
+  }
+  const label = tb.label({ htmlElement, cssClass: "label-renderer" });
+  tb.add(label, props.layerId);
+  return label;
+};
+var rerenderLabel = (label, props, prevProps) => {
+  label.name = props.id;
+  if (props.coords && !deepEqual(props.coords, prevProps.coords)) {
+    label.setCoords(props.coords);
+  }
+};
+var labelCount = 0;
+var LabelRenderer = ({
+  model,
+  onOpen,
+  onClose,
+  onError,
+  children,
+  ...props
+}) => {
+  const { threebox } = React9.useContext(ThreeboxContext) || {};
+  const { layerId } = React9.useContext(ThreeboxLayerContext) || {};
+  const tb = threebox?.getThreebox();
+  const propsRef = React9.useRef({});
+  const { current: modelRef } = React9.useRef(model);
+  const labelRef = React9.useRef(null);
+  const isRendered = React9.useRef(false);
+  const renderProps = React9.useMemo(() => {
+    return {
+      ...props,
+      id: props.id || `label-renderer-${labelCount++}`,
+      layerId
+    };
+  }, [props, layerId]);
+  const container = React9.useMemo(() => {
+    const div = document.createElement("div");
+    div.className = "label-content";
+    div.style.pointerEvents = "auto";
+    div.style.cursor = "pointer";
+    return div;
+  }, []);
+  React9.useEffect(() => {
+    if (tb) {
+      return () => {
+        try {
+          if (modelRef) {
+            modelRef.removeLabel();
+          } else {
+            tb.remove(labelRef.current);
+          }
+          onClose?.();
+          propsRef.current = {};
+          isRendered.current = false;
+        } catch (error) {
+          console.error(`Error removing label ${labelRef.current.name}:`, error);
+        }
+      };
+    }
+    return void 0;
+  }, [tb]);
+  React9.useEffect(() => {
+    try {
+      if (!isRendered.current && container && tb) {
+        labelRef.current = addLabel(tb, renderProps, container, modelRef);
+        onOpen?.();
+        isRendered.current = true;
+      }
+      if (labelRef.current) {
+        rerenderLabel(labelRef.current, renderProps, propsRef.current);
+      }
+    } catch (error) {
+      console.error(`Error rendering label ${renderProps.id}:`, error);
+      onError?.(error);
+    }
+    propsRef.current = renderProps;
+  }, [tb, renderProps, container]);
+  React9.useEffect(() => {
+    applyReactStyle(container, props.style);
+  }, [container, props.style]);
+  return ReactDOM.createPortal(children, container);
+};
+
+// src/modules/react-threebox/components/model-batcher.tsx
+import * as React10 from "react";
 import { jsx as jsx4 } from "react/jsx-runtime";
 var useShouldRender = (batchIndex, batchSize, batchDelay) => {
-  const [shouldRender, setShouldRender] = React9.useState(false);
-  React9.useEffect(() => {
+  const [shouldRender, setShouldRender] = React10.useState(false);
+  React10.useEffect(() => {
     const delay = Math.floor(batchIndex / batchSize) * batchDelay;
     const timer = setTimeout(() => setShouldRender(true), delay);
     return () => clearTimeout(timer);
@@ -1223,7 +1312,7 @@ var ModelSource = ({ children, ...props }) => {
 };
 
 // src/modules/react-threebox/components/model-layer.tsx
-import React11, { useMemo as useMemo8 } from "react";
+import React12, { useMemo as useMemo9 } from "react";
 import { Layer } from "react-map-gl/maplibre";
 
 // src/modules/react-threebox/style-spec/model-layer-properties.ts
@@ -1442,14 +1531,14 @@ var ModelPropertyEvaluator = class {
 import { createPropertyExpression, isExpression } from "@maplibre/maplibre-gl-style-spec";
 
 // src/utils/use-debounce-callback.ts
-import { useEffect as useEffect9, useRef as useRef6, useCallback as useCallback6 } from "react";
+import { useEffect as useEffect10, useRef as useRef7, useCallback as useCallback6 } from "react";
 var useDebounceCallback = (callback, delay) => {
-  const timeoutRef = useRef6(null);
-  const callbackRef = useRef6(callback);
-  useEffect9(() => {
+  const timeoutRef = useRef7(null);
+  const callbackRef = useRef7(callback);
+  useEffect10(() => {
     callbackRef.current = callback;
   }, [callback]);
-  useEffect9(() => {
+  useEffect10(() => {
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
@@ -1496,11 +1585,11 @@ var transformRenderer = (item) => ({
 });
 var ModelLayer = (props) => {
   const { layout, paint, ...layerProps } = props;
-  const { map } = React11.useContext(ThreeboxContext) || {};
-  const id = React11.useMemo(() => props.id ? `threebox-${props.id}` : "", [props.id]);
-  const [styleLoaded, setStyleLoaded] = React11.useState(0);
-  const [modelsInViewBox, setModelsInViewBox] = React11.useState([]);
-  React11.useEffect(() => {
+  const { map } = React12.useContext(ThreeboxContext) || {};
+  const id = React12.useMemo(() => props.id ? `threebox-${props.id}` : "", [props.id]);
+  const [styleLoaded, setStyleLoaded] = React12.useState(0);
+  const [modelsInViewBox, setModelsInViewBox] = React12.useState([]);
+  React12.useEffect(() => {
     const forceUpdate = () => setStyleLoaded((version) => version + 1);
     map?.on("styledata", forceUpdate);
     forceUpdate();
@@ -1508,10 +1597,10 @@ var ModelLayer = (props) => {
       map?.off("styledata", forceUpdate);
     };
   }, [map]);
-  const evaluator = React11.useMemo(() => {
+  const evaluator = React12.useMemo(() => {
     return new ModelPropertyEvaluator(layout, paint);
   }, [layout, paint]);
-  const processFeature = React11.useCallback(
+  const processFeature = React12.useCallback(
     (feature, global) => {
       const layoutProps = evaluator.evaluateLayout(global, feature);
       const paintProps = evaluator.evaluatePaint(global, feature);
@@ -1531,7 +1620,7 @@ var ModelLayer = (props) => {
     },
     [evaluator]
   );
-  const processFeatures = React11.useCallback(
+  const processFeatures = React12.useCallback(
     (features) => {
       if (!map) return [];
       const zoom = map.getZoom();
@@ -1542,7 +1631,7 @@ var ModelLayer = (props) => {
     [map, processFeature]
   );
   const queryModelsInViewBox = useDebounceCallback(
-    React11.useCallback(() => {
+    React12.useCallback(() => {
       if (!map) return;
       const features = map.queryRenderedFeatures({ layers: [props.id] });
       const models = processFeatures(features);
@@ -1550,16 +1639,16 @@ var ModelLayer = (props) => {
     }, [map, processFeatures]),
     500
   );
-  React11.useEffect(() => {
+  React12.useEffect(() => {
     queryModelsInViewBox();
   }, [queryModelsInViewBox, layout, paint]);
-  React11.useEffect(() => {
+  React12.useEffect(() => {
     map?.on("moveend", queryModelsInViewBox);
     return () => {
       map?.off("moveend", queryModelsInViewBox);
     };
   }, [map, queryModelsInViewBox]);
-  const modelItems = React11.useMemo(() => {
+  const modelItems = React12.useMemo(() => {
     if (!modelsInViewBox.length) return [];
     const modelMap = /* @__PURE__ */ new Map();
     modelsInViewBox.forEach((item) => {
@@ -1576,17 +1665,17 @@ var ModelLayer = (props) => {
     });
     return Array.from(modelMap.values());
   }, [modelsInViewBox]);
-  const ModelItems = useMemo8(() => {
+  const ModelItems = useMemo9(() => {
     return modelItems.map((model) => /* @__PURE__ */ jsx6(ModelLoader, { ...model.loader, children: model.renderers.map((props2) => /* @__PURE__ */ jsx6(ModelRenderer, { ...props2 }, props2.id)) }, model.loader.id));
   }, [modelItems]);
-  return /* @__PURE__ */ jsxs(React11.Fragment, { children: [
+  return /* @__PURE__ */ jsxs(React12.Fragment, { children: [
     /* @__PURE__ */ jsx6(Layer, { type: "fill", ...layerProps }),
     styleLoaded > 0 && /* @__PURE__ */ jsx6(ThreeboxLayer, { id, beforeId: props.beforeId, children: ModelItems })
   ] });
 };
 
 // src/modules/react-threejs/components/effect-canvas.tsx
-import * as React12 from "react";
+import * as React13 from "react";
 import { useMap as useMap4 } from "react-map-gl/maplibre";
 
 // src/modules/react-threejs/threejs/graphics/effect-manager.ts
@@ -3147,15 +3236,15 @@ var EffectManager = class {
 
 // src/modules/react-threejs/components/effect-canvas.tsx
 import { jsx as jsx7 } from "react/jsx-runtime";
-var EffectCanvasContext = React12.createContext(null);
+var EffectCanvasContext = React13.createContext(null);
 var _EffectCanvas = (props, ref) => {
   const { id, mapId, children, onError, onLoad, ...options } = props;
   const mapRef = useMap4();
-  const [effectManager, setEffectManager] = React12.useState(null);
-  const optionsRef = React12.useRef(options);
-  const { current: contextValue } = React12.useRef({});
-  const canvasOptions = React12.useMemo(() => options, [Object.values(options).join(",")]);
-  React12.useEffect(() => {
+  const [effectManager, setEffectManager] = React13.useState(null);
+  const optionsRef = React13.useRef(options);
+  const { current: contextValue } = React13.useRef({});
+  const canvasOptions = React13.useMemo(() => options, [Object.values(options).join(",")]);
+  React13.useEffect(() => {
     let isMounted = true;
     let effectInstance = null;
     const mapInstance = mapRef?.[mapId || "current"]?.getMap();
@@ -3200,13 +3289,13 @@ var _EffectCanvas = (props, ref) => {
       optionsRef.current = options;
     }
   }, [options, effectManager]);
-  React12.useImperativeHandle(ref, () => contextValue, [effectManager]);
+  React13.useImperativeHandle(ref, () => contextValue, [effectManager]);
   return effectManager && /* @__PURE__ */ jsx7(EffectCanvasContext.Provider, { value: contextValue, children });
 };
-var EffectCanvas = React12.forwardRef(_EffectCanvas);
+var EffectCanvas = React13.forwardRef(_EffectCanvas);
 
 // src/modules/react-threejs/components/bloom-line.tsx
-import * as React13 from "react";
+import * as React14 from "react";
 
 // src/modules/react-threejs/threejs/objects/bloom-line/bloom-line-geometry.ts
 import * as THREE9 from "three";
@@ -3269,11 +3358,11 @@ var BloomLine = class extends Line2 {
 
 // src/modules/react-threejs/components/bloom-line.tsx
 import { jsx as jsx8 } from "react/jsx-runtime";
-var MeshContext = React13.createContext({ mesh: null });
+var MeshContext = React14.createContext({ mesh: null });
 var _LineMesh = ({ children }) => {
-  const { group, bloom } = React13.useContext(EffectCanvasContext) || {};
-  const [mesh] = React13.useState(new BloomLine());
-  React13.useEffect(() => {
+  const { group, bloom } = React14.useContext(EffectCanvasContext) || {};
+  const [mesh] = React14.useState(new BloomLine());
+  React14.useEffect(() => {
     if (mesh && group && bloom) {
       try {
         group.add(mesh);
@@ -3292,10 +3381,10 @@ var _LineMesh = ({ children }) => {
   return /* @__PURE__ */ jsx8(MeshContext.Provider, { value: { mesh }, children });
 };
 var _LineGeometry = (props) => {
-  const { mesh } = React13.useContext(MeshContext) || {};
-  const [geometry] = React13.useState(new BloomLineGeometry());
-  const memorizedProps = React13.useMemo(() => props, [props.geometry?.join(",")]);
-  React13.useEffect(() => {
+  const { mesh } = React14.useContext(MeshContext) || {};
+  const [geometry] = React14.useState(new BloomLineGeometry());
+  const memorizedProps = React14.useMemo(() => props, [props.geometry?.join(",")]);
+  React14.useEffect(() => {
     if (mesh && geometry) {
       if (mesh.geometry) {
         mesh.geometry.dispose();
@@ -3319,10 +3408,10 @@ var _LineGeometry = (props) => {
   return null;
 };
 var _LineMaterial = (props) => {
-  const { mesh } = React13.useContext(MeshContext) || {};
-  const [material] = React13.useState(new BloomLineMaterial(props));
-  const memorizedProps = React13.useMemo(() => props, [Object.values(props).join(",")]);
-  React13.useEffect(() => {
+  const { mesh } = React14.useContext(MeshContext) || {};
+  const [material] = React14.useState(new BloomLineMaterial(props));
+  const memorizedProps = React14.useMemo(() => props, [Object.values(props).join(",")]);
+  React14.useEffect(() => {
     if (mesh && material) {
       if (mesh.material) {
         mesh.material.dispose();
@@ -3344,7 +3433,7 @@ var _LineMaterial = (props) => {
 };
 
 // src/modules/react-threejs/components/extrude-wall.tsx
-import * as React14 from "react";
+import * as React15 from "react";
 
 // src/modules/react-threejs/threejs/objects/extrude-wall/extrude-wall-geometry.ts
 import * as THREE11 from "three";
@@ -3461,11 +3550,11 @@ var ExtrudeWall = class extends THREE13.Mesh {
 
 // src/modules/react-threejs/components/extrude-wall.tsx
 import { jsx as jsx9 } from "react/jsx-runtime";
-var MeshContext2 = React14.createContext({ mesh: null });
+var MeshContext2 = React15.createContext({ mesh: null });
 var _WallMesh = ({ children }) => {
-  const { group, bloom } = React14.useContext(EffectCanvasContext) || {};
-  const [mesh] = React14.useState(new ExtrudeWall());
-  React14.useEffect(() => {
+  const { group, bloom } = React15.useContext(EffectCanvasContext) || {};
+  const [mesh] = React15.useState(new ExtrudeWall());
+  React15.useEffect(() => {
     if (mesh && group && bloom) {
       try {
         group.add(mesh);
@@ -3484,10 +3573,10 @@ var _WallMesh = ({ children }) => {
   return /* @__PURE__ */ jsx9(MeshContext2.Provider, { value: { mesh }, children });
 };
 var _WallGeometry = (props) => {
-  const { mesh } = React14.useContext(MeshContext2) || {};
-  const [geometry] = React14.useState(new ExtrudeWallGeometry());
-  const memorizedProps = React14.useMemo(() => props, [props.geometry?.join(","), props.height]);
-  React14.useEffect(() => {
+  const { mesh } = React15.useContext(MeshContext2) || {};
+  const [geometry] = React15.useState(new ExtrudeWallGeometry());
+  const memorizedProps = React15.useMemo(() => props, [props.geometry?.join(","), props.height]);
+  React15.useEffect(() => {
     if (mesh && geometry) {
       if (mesh.geometry) {
         mesh.geometry.dispose();
@@ -3511,10 +3600,10 @@ var _WallGeometry = (props) => {
   return null;
 };
 var _WallMaterial = (props) => {
-  const { mesh } = React14.useContext(MeshContext2) || {};
-  const [material] = React14.useState(new ExtrudeWallMaterial(props));
-  const memorizedProps = React14.useMemo(() => props, [Object.values(props).join(",")]);
-  React14.useEffect(() => {
+  const { mesh } = React15.useContext(MeshContext2) || {};
+  const [material] = React15.useState(new ExtrudeWallMaterial(props));
+  const memorizedProps = React15.useMemo(() => props, [Object.values(props).join(",")]);
+  React15.useEffect(() => {
     if (mesh && material) {
       if (mesh.material && !Array.isArray(mesh.material)) {
         mesh.material.dispose();
@@ -3546,6 +3635,7 @@ export {
   _WallMesh as ExtrudeWall,
   _WallGeometry as ExtrudeWallGeometry,
   _WallMaterial as ExtrudeWallMaterial,
+  LabelRenderer,
   ModelBatcher,
   ModelLayer,
   ModelLoader,

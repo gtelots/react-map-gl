@@ -6,10 +6,10 @@ import * as maplibre_gl from 'maplibre-gl';
 import { CustomLayerInterface, Popup, Map, PopupOptions, FilterSpecification } from 'maplibre-gl';
 export { CustomLayerInterface as CustomLayerOptions, CustomRenderMethodInput as CustomRenderOptions, Map as MapboxInstance } from 'maplibre-gl';
 import * as react_map_gl_dist_esm_exports_maplibre from 'react-map-gl/dist/esm/exports-maplibre';
+import { Point, Position } from 'geojson';
 import { Threebox as Threebox$1 } from 'threebox-plugin';
 export { Threebox as ThreeboxInstance } from 'threebox-plugin';
 import * as THREE from 'three';
-import { Position } from 'geojson';
 import { LineMaterialParameters } from 'three/examples/jsm/Addons.js';
 
 type CustomLayerProps = Omit<CustomLayerInterface, 'type' | 'renderingMode'> & {
@@ -306,6 +306,16 @@ type ModelBatchItem = {
     /** Array of ModelRenderer props - one loader can render multiple instances */
     renderers: ModelRendererOptions[];
 };
+type LabelRendererOptions = {
+    /** Unique identifier for the model renderer instance */
+    id?: string;
+    /** Layer ID to which to add the model */
+    layerId?: string;
+    /** Position to which to move the object */
+    coords?: [number, number, number] | [number, number];
+    /** Style for the label */
+    style?: React.CSSProperties;
+};
 
 type ModelLoaderProps = ModelLoaderOptions & {
     children?: React$1.ReactNode;
@@ -322,6 +332,16 @@ type ModelRendererProps = ModelRendererOptions & {
 };
 declare const ModelRenderer: React$1.FC<ModelRendererProps>;
 
+type LabelRendererProps = LabelRendererOptions & {
+    model?: any;
+    layerId?: string;
+    onOpen?: () => void;
+    onClose?: () => void;
+    onError?: (error: any) => void;
+    children?: React$1.ReactNode;
+};
+declare const LabelRenderer: React$1.FC<LabelRendererProps>;
+
 interface ModelBatcherProps {
     models: ModelBatchItem[];
     batchSize?: number;
@@ -336,12 +356,129 @@ declare const ModelBatcher: React$1.FC<ModelBatcherProps>;
  * Source: mapbox-gl-js/src/style-spec/
  */
 
+/**
+ * Expression parameter types
+ */
+type ExpressionParameter = 'zoom' | 'feature' | 'feature-state' | 'pitch' | 'line-progress' | 'heatmap-density' | 'sky-radial-progress' | 'distance-from-center' | 'raster-value' | 'raster-particle-speed' | 'measure-light';
+/**
+ * Expression specification
+ */
+type ExpressionSpecification = {
+    interpolated: boolean;
+    parameters?: ExpressionParameter[];
+    relaxZoomRestriction?: boolean;
+};
+/**
+ * Expression types
+ */
+type ExpressionType = 'data-driven' | 'color-ramp' | 'data-constant' | 'constant';
+/**
+ * Base property specification
+ */
+type BasePropertySpecification = {
+    'property-type': ExpressionType;
+    expression?: ExpressionSpecification;
+    transition?: boolean;
+    experimental?: boolean;
+    private?: boolean;
+    requires?: unknown;
+    appearance?: boolean;
+};
+/**
+ * String property specification
+ */
+type StringPropertySpecification = BasePropertySpecification & {
+    type: 'string';
+    default?: string;
+    tokens?: boolean;
+};
+/**
+ * Number property specification
+ */
+type NumberPropertySpecification = BasePropertySpecification & {
+    type: 'number';
+    default?: number;
+    minimum?: number;
+    maximum?: number;
+    units?: string;
+    period?: number;
+};
+/**
+ * Boolean property specification
+ */
+type BooleanPropertySpecification = BasePropertySpecification & {
+    type: 'boolean';
+    default?: boolean;
+    overridable?: boolean;
+};
+/**
+ * Enum property specification
+ */
+type EnumPropertySpecification = BasePropertySpecification & {
+    type: 'enum';
+    values: {
+        [_: string]: unknown;
+    };
+    default?: string;
+};
+/**
+ * Array property specification
+ */
+type ArrayPropertySpecification = BasePropertySpecification & {
+    type: 'array';
+    value: 'number' | 'string' | 'boolean' | 'enum';
+    length?: number;
+    default?: number[] | string[] | boolean[];
+    minimum?: number;
+    maximum?: number;
+    period?: number;
+    units?: string;
+    values?: {
+        [_: string]: unknown;
+    };
+};
+/**
+ * Style property specification (union of all property types)
+ */
+type StylePropertySpecification = StringPropertySpecification | NumberPropertySpecification | BooleanPropertySpecification | EnumPropertySpecification | ArrayPropertySpecification;
+/**
+ * Property value specification types
+ */
+type PropertyValueSpecification<T> = T | ExpressionSpecificationArray;
 type DataDrivenPropertyValueSpecification<T> = T | ExpressionSpecificationArray;
 /**
  * Expression specification (array format)
  * Examples: ['get', 'property'], ['case', condition, value1, value2, default]
  */
 type ExpressionSpecificationArray = Array<unknown>;
+/**
+ * Feature interface for expression evaluation
+ * Source: mapbox-gl-js/src/style-spec/expression/index.ts
+ */
+interface Feature {
+    readonly type: 0 | 1 | 2 | 3 | 'Unknown' | 'Point' | 'LineString' | 'Polygon';
+    readonly id?: string | number | null;
+    readonly properties: Record<PropertyKey, unknown>;
+    readonly patterns?: Record<PropertyKey, string[]>;
+    readonly geometry?: Array<Array<{
+        x: number;
+        y: number;
+    }>>;
+}
+/**
+ * Global properties for expression evaluation
+ */
+interface GlobalProperties {
+    zoom: number;
+    pitch?: number;
+    heatmapDensity?: number;
+    lineProgress?: number;
+    rasterValue?: number;
+    rasterParticleSpeed?: number;
+    skyRadialProgress?: number;
+    brightness?: number;
+    worldview?: string;
+}
 /**
  * Model specifications
  */
@@ -362,13 +499,23 @@ type ModelLayerSpecification = {
     maxzoom?: number;
     layout?: {
         'model-id'?: string | ExpressionSpecificationArray;
-        visibility?: boolean;
+        visibility?: string;
     };
     paint?: {
         'model-scale'?: DataDrivenPropertyValueSpecification<number>;
         'model-rotation'?: DataDrivenPropertyValueSpecification<number>;
         'model-translation'?: DataDrivenPropertyValueSpecification<number>;
     };
+};
+type ModelFeatureProperties = {
+    id: string;
+    model: string;
+    visible: boolean;
+    scale: [number, number, number];
+    rotation: [number, number, number];
+    translation: [number, number, number];
+    properties: Record<string, any>;
+    geometry: Point;
 };
 
 type ModelSourceProps = ModelSouceSpecification & {
@@ -607,4 +754,4 @@ declare const _WallMesh: React$1.FC<WallMeshProps>;
 declare const _WallGeometry: React$1.FC<ExtrudeWallGeometryParams>;
 declare const _WallMaterial: React$1.FC<ExtrudeWallMaterialParams>;
 
-export { _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, CustomLayer, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, ModelLayer, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, ModelSource, type ModelTypes, type ModelUnits, PopupAnimation, type PopupAnimationProps, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useLineAnimation, useThreebox };
+export { type ArrayPropertySpecification, type BasePropertySpecification, _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, type BooleanPropertySpecification, CustomLayer, type DataDrivenPropertyValueSpecification, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, type EnumPropertySpecification, type ExpressionParameter, type ExpressionSpecification, type ExpressionSpecificationArray, type ExpressionType, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type Feature, type GlobalProperties, LabelRenderer, type LabelRendererOptions, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, type ModelFeatureProperties, ModelLayer, type ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, type ModelSouceSpecification, ModelSource, type ModelTypes, type ModelUnits, type NumberPropertySpecification, PopupAnimation, type PopupAnimationProps, type PropertyValueSpecification, type StringPropertySpecification, type StylePropertySpecification, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useLineAnimation, useThreebox };
