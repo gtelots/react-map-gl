@@ -619,6 +619,7 @@ var useLineAnimation = ({ map, layerId, speed = 50 }) => {
   }, [map, layerId, speed]);
   useEffect4(() => {
     map?.on("style.load", lineAnimation);
+    lineAnimation();
     return () => {
       map?.off("style.load", lineAnimation);
     };
@@ -1174,75 +1175,73 @@ var rerenderLabel = (label, props, prevProps) => {
   }
 };
 var labelCount = 0;
-var LabelRenderer = ({
-  model,
-  onOpen,
-  onClose,
-  onError,
-  children,
-  ...props
-}) => {
-  const { threebox } = React9.useContext(ThreeboxContext) || {};
-  const { layerId } = React9.useContext(ThreeboxLayerContext) || {};
-  const tb = threebox?.getThreebox();
-  const propsRef = React9.useRef({});
-  const { current: modelRef } = React9.useRef(model);
-  const labelRef = React9.useRef(null);
-  const isRendered = React9.useRef(false);
-  const renderProps = React9.useMemo(() => {
-    return {
-      ...props,
-      id: props.id || `label-renderer-${labelCount++}`,
-      layerId
-    };
-  }, [props, layerId]);
-  const container = React9.useMemo(() => {
-    const div = document.createElement("div");
-    div.className = "label-content";
-    div.style.pointerEvents = "auto";
-    div.style.cursor = "pointer";
-    return div;
-  }, []);
-  React9.useEffect(() => {
-    if (tb) {
-      return () => {
-        try {
-          if (modelRef) {
-            modelRef.removeLabel();
-          } else {
-            tb.remove(labelRef.current);
-          }
-          onClose?.();
-          propsRef.current = {};
-          isRendered.current = false;
-        } catch (error) {
-          console.error(`Error removing label ${labelRef.current.name}:`, error);
+var LabelRenderer = React9.memo(
+  React9.forwardRef(
+    ({ model, onOpen, onClose, onError, children, ...props }, ref) => {
+      const { threebox } = React9.useContext(ThreeboxContext) || {};
+      const { layerId } = React9.useContext(ThreeboxLayerContext) || {};
+      const tb = threebox?.getThreebox();
+      const propsRef = React9.useRef({});
+      const { current: modelRef } = React9.useRef(model);
+      const labelRef = React9.useRef(null);
+      const isRendered = React9.useRef(false);
+      const renderProps = React9.useMemo(() => {
+        return {
+          ...props,
+          id: props.id || `label-renderer-${labelCount++}`,
+          layerId
+        };
+      }, [props, layerId]);
+      const container = React9.useMemo(() => {
+        const div = document.createElement("div");
+        div.className = "label-content";
+        div.style.pointerEvents = "auto";
+        div.style.cursor = "pointer";
+        return div;
+      }, []);
+      React9.useEffect(() => {
+        if (tb) {
+          return () => {
+            try {
+              if (modelRef) {
+                modelRef.removeLabel();
+              } else {
+                tb.removeByName(labelRef.current.name);
+              }
+              onClose?.();
+              propsRef.current = {};
+              isRendered.current = false;
+            } catch (error) {
+              console.error(`Error removing label ${labelRef.current.name}:`, error);
+            }
+          };
         }
-      };
+        return void 0;
+      }, [tb]);
+      React9.useEffect(() => {
+        try {
+          if (!isRendered.current && container && tb) {
+            labelRef.current = addLabel(tb, renderProps, container, modelRef);
+            onOpen?.();
+            isRendered.current = true;
+          }
+          if (labelRef.current) {
+            rerenderLabel(labelRef.current, renderProps, propsRef.current);
+          }
+        } catch (error) {
+          console.error(`Error rendering label ${renderProps.id}:`, error);
+          onError?.(error);
+        }
+        propsRef.current = renderProps;
+      }, [tb, renderProps, container]);
+      React9.useEffect(() => {
+        applyReactStyle(container, props.style);
+      }, [container, props.style]);
+      React9.useImperativeHandle(ref, () => labelRef.current, []);
+      return ReactDOM.createPortal(children, container);
     }
-    return void 0;
-  }, [tb]);
-  React9.useEffect(() => {
-    try {
-      if (!isRendered.current && container && tb) {
-        labelRef.current = addLabel(tb, renderProps, container, modelRef);
-        onOpen?.();
-        isRendered.current = true;
-      }
-      if (labelRef.current) {
-        rerenderLabel(labelRef.current, renderProps, propsRef.current);
-      }
-    } catch (error) {
-      console.error(`Error rendering label ${renderProps.id}:`, error);
-      onError?.(error);
-    }
-    propsRef.current = renderProps;
-  }, [tb, renderProps, container]);
-  React9.useEffect(() => {
-    applyReactStyle(container, props.style);
-  }, [container, props.style]);
-  return ReactDOM.createPortal(children, container);
-};
+  )
+);
 
 // src/modules/react-threebox/components/model-batcher.tsx
 import * as React10 from "react";
@@ -1312,7 +1311,7 @@ var ModelSource = ({ children, ...props }) => {
 };
 
 // src/modules/react-threebox/components/model-layer.tsx
-import React12, { useMemo as useMemo9 } from "react";
+import React12, { useCallback as useCallback7, useMemo as useMemo9 } from "react";
 import { Layer } from "react-map-gl/maplibre";
 
 // src/modules/react-threebox/style-spec/model-layer-properties.ts
@@ -1559,6 +1558,33 @@ var useDebounceCallback = (callback, delay) => {
   return debouncedCallback;
 };
 
+// src/utils/deep-layers.ts
+function diffLayers(prevStyle, newStyle) {
+  const prevLayers = prevStyle?.layers || [];
+  const newLayers = newStyle?.layers || [];
+  const prevMap = new Map(prevLayers.map((l) => [l.id, l]));
+  const newMap = new Map(newLayers.map((l) => [l.id, l]));
+  const added = [];
+  const removed = [];
+  const changed = [];
+  for (const [id, prevLayer] of prevMap) {
+    const newLayer = newMap.get(id);
+    if (!newLayer) {
+      removed.push(id);
+      continue;
+    }
+    if (!deepEqual(prevLayer, newLayer)) {
+      changed.push(id);
+    }
+  }
+  for (const [id] of newMap) {
+    if (!prevMap.has(id)) {
+      added.push(id);
+    }
+  }
+  return { added, removed, changed };
+}
+
 // src/modules/react-threebox/components/model-layer.tsx
 import { jsx as jsx6, jsxs } from "react/jsx-runtime";
 var transformLoader = (item) => ({
@@ -1586,17 +1612,10 @@ var transformRenderer = (item) => ({
 var ModelLayer = (props) => {
   const { layout, paint, ...layerProps } = props;
   const { map } = React12.useContext(ThreeboxContext) || {};
-  const id = React12.useMemo(() => props.id ? `threebox-${props.id}` : "", [props.id]);
+  const id = React12.useMemo(() => props.id ? `threebox-${props.id}` : "", []);
   const [styleLoaded, setStyleLoaded] = React12.useState(0);
   const [modelsInViewBox, setModelsInViewBox] = React12.useState([]);
-  React12.useEffect(() => {
-    const forceUpdate = () => setStyleLoaded((version) => version + 1);
-    map?.on("styledata", forceUpdate);
-    forceUpdate();
-    return () => {
-      map?.off("styledata", forceUpdate);
-    };
-  }, [map]);
+  const previousStyle = React12.useRef({});
   const evaluator = React12.useMemo(() => {
     return new ModelPropertyEvaluator(layout, paint);
   }, [layout, paint]);
@@ -1639,13 +1658,29 @@ var ModelLayer = (props) => {
     }, [map, processFeatures]),
     500
   );
+  const forceUpdate = useCallback7(() => {
+    if (!map) return;
+    const newStyle = map.getStyle();
+    const { added } = diffLayers(previousStyle.current, newStyle);
+    if (added.includes(props.id)) {
+      setTimeout(queryModelsInViewBox);
+      setStyleLoaded((version) => version + 1);
+    }
+    previousStyle.current = newStyle;
+  }, [map, props.id, queryModelsInViewBox]);
   React12.useEffect(() => {
-    queryModelsInViewBox();
-  }, [queryModelsInViewBox, layout, paint]);
-  React12.useEffect(() => {
-    map?.on("moveend", queryModelsInViewBox);
+    if (!map) return;
+    map.on("styledata", forceUpdate);
+    forceUpdate();
     return () => {
-      map?.off("moveend", queryModelsInViewBox);
+      map.off("styledata", forceUpdate);
+    };
+  }, [map, forceUpdate]);
+  React12.useEffect(() => {
+    if (!map) return;
+    map.on("moveend", queryModelsInViewBox);
+    return () => {
+      map.off("moveend", queryModelsInViewBox);
     };
   }, [map, queryModelsInViewBox]);
   const modelItems = React12.useMemo(() => {
@@ -1666,11 +1701,12 @@ var ModelLayer = (props) => {
     return Array.from(modelMap.values());
   }, [modelsInViewBox]);
   const ModelItems = useMemo9(() => {
+    if (styleLoaded === 0) return null;
     return modelItems.map((model) => /* @__PURE__ */ jsx6(ModelLoader, { ...model.loader, children: model.renderers.map((props2) => /* @__PURE__ */ jsx6(ModelRenderer, { ...props2 }, props2.id)) }, model.loader.id));
-  }, [modelItems]);
+  }, [modelItems, styleLoaded]);
   return /* @__PURE__ */ jsxs(React12.Fragment, { children: [
     /* @__PURE__ */ jsx6(Layer, { type: "fill", ...layerProps }),
-    styleLoaded > 0 && /* @__PURE__ */ jsx6(ThreeboxLayer, { id, beforeId: props.beforeId, children: ModelItems })
+    /* @__PURE__ */ jsx6(ThreeboxLayer, { id, beforeId: props.beforeId, children: ModelItems })
   ] });
 };
 
