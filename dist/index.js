@@ -1715,8 +1715,8 @@ var ModelLayer = (props) => {
   const forceUpdate = (0, import_react5.useCallback)(() => {
     if (!map) return;
     const newStyle = map.getStyle();
-    const { added } = diffLayers(previousStyle.current, newStyle);
-    if (added.includes(props.id)) {
+    const { added, changed } = diffLayers(previousStyle.current, newStyle);
+    if (added.includes(props.id) || changed.includes(props.id)) {
       setTimeout(queryModelsInViewBox);
       setStyleLoaded((version) => version + 1);
     }
