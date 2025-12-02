@@ -1653,9 +1653,13 @@ var ModelLayer = (props) => {
     React12.useCallback(() => {
       if (!map) return;
       const features = map.queryRenderedFeatures({ layers: [props.id] });
-      const models = processFeatures(features);
-      setModelsInViewBox(models);
-    }, [map, processFeatures]),
+      const processedFeatures = processFeatures(features);
+      const visibleModels = processedFeatures.reduce((acc, item) => {
+        if (!acc.has(item.id) && item.visible) acc.set(item.id, item);
+        return acc;
+      }, /* @__PURE__ */ new Map());
+      setModelsInViewBox(Array.from(visibleModels.values()));
+    }, [map, props.id, processFeatures]),
     500
   );
   const forceUpdate = useCallback7(() => {
@@ -1670,39 +1674,31 @@ var ModelLayer = (props) => {
   }, [map, props.id, queryModelsInViewBox]);
   React12.useEffect(() => {
     if (!map) return;
+    map.on("moveend", queryModelsInViewBox);
     map.on("styledata", forceUpdate);
     forceUpdate();
     return () => {
+      map.off("moveend", queryModelsInViewBox);
       map.off("styledata", forceUpdate);
     };
-  }, [map, forceUpdate]);
-  React12.useEffect(() => {
-    if (!map) return;
-    map.on("moveend", queryModelsInViewBox);
-    return () => {
-      map.off("moveend", queryModelsInViewBox);
-    };
-  }, [map, queryModelsInViewBox]);
+  }, [map, forceUpdate, queryModelsInViewBox]);
   const modelItems = React12.useMemo(() => {
     if (!modelsInViewBox.length) return [];
-    const modelMap = /* @__PURE__ */ new Map();
-    modelsInViewBox.forEach((item) => {
+    const modelMap = modelsInViewBox.reduce((acc, item) => {
       const renderer2 = transformRenderer(item);
-      if (modelMap.has(item.model)) {
-        modelMap.get(item.model).renderers.push(renderer2);
+      if (acc.has(item.model)) {
+        acc.get(item.model).renderers.push(renderer2);
       } else {
-        const newItem = {
-          loader: transformLoader(item),
-          renderers: [renderer2]
-        };
-        modelMap.set(item.model, newItem);
+        const loader = transformLoader(item);
+        acc.set(item.model, { loader, renderers: [renderer2] });
       }
-    });
+      return acc;
+    }, /* @__PURE__ */ new Map());
     return Array.from(modelMap.values());
   }, [modelsInViewBox]);
   const ModelItems = useMemo9(() => {
     if (styleLoaded === 0) return null;
-    return modelItems.map((model) => /* @__PURE__ */ jsx6(ModelLoader, { ...model.loader, children: model.renderers.map((props2) => /* @__PURE__ */ jsx6(ModelRenderer, { ...props2 }, props2.id)) }, model.loader.id));
+    return modelItems.map((l) => /* @__PURE__ */ jsx6(ModelLoader, { ...l.loader, children: l.renderers.map((r) => /* @__PURE__ */ jsx6(ModelRenderer, { ...r }, r.id)) }, l.loader.id));
   }, [modelItems, styleLoaded]);
   return /* @__PURE__ */ jsxs(React12.Fragment, { children: [
     /* @__PURE__ */ jsx6(Layer, { type: "fill", ...layerProps }),
