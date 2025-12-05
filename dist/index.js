@@ -41,6 +41,7 @@ __export(index_exports, {
   ExtrudeWallGeometry: () => _WallGeometry,
   ExtrudeWallMaterial: () => _WallMaterial,
   LabelRenderer: () => LabelRenderer,
+  ModelBatchLoader: () => ModelBatchLoader,
   ModelBatcher: () => ModelBatcher,
   ModelLayer: () => ModelLayer,
   ModelLoader: () => ModelLoader,
@@ -960,16 +961,13 @@ var updateModel = (model, props, prevProps) => {
   if (props.anchor !== prevProps.anchor) {
     model.setAnchor(props.anchor);
   }
-  if (deepEqual(props.feature, prevProps.feature)) {
-    model.userData.feature = props.feature;
-  }
-  model.userData.model = { ...props };
+  model.userData.model = { ...model.userData.model, ...props };
   return model;
 };
 var createModel = async (tb, props) => {
   if (tb) {
     const model = await tb.loadObj(props);
-    model.userData.model = { ...props };
+    model.userData.model = { ...model.userData.model, ...props };
     return model;
   }
   return null;
@@ -1020,7 +1018,6 @@ var ModelLoader = ({
     return { ...defaultProps, ...newProps };
   }, [
     props.anchor,
-    props.feature,
     props.id,
     props.obj,
     props.rotation,
@@ -1090,29 +1087,7 @@ var pointerEvents = {
   ObjectMouseOut: "onObjectMouseOut"
 };
 var propertyNames = ["wireframe", "visibility", "hidden"];
-var addModel = (tb, props, model) => {
-  const currentScale = model.scale.z;
-  const originZ = currentScale / 2;
-  const targetZ = currentScale;
-  const renderingEffect = props.renderingEffect;
-  if (renderingEffect) {
-    model.scale.z = originZ;
-  }
-  setTimeout(() => {
-    tb.add(model, props.layerId);
-  }, 50);
-  if (renderingEffect) {
-    const duration = (renderingEffect.duration || 500) / 1e3;
-    const ease = renderingEffect.easing || ((t) => t);
-    setTimeout(() => {
-      import_gsap.gsap.to(model.scale, { z: targetZ, duration, ease });
-    }, 100);
-  }
-};
 var rerenderModel = (model, props, prevProps, defaultProps3) => {
-  model.name = props.id;
-  model.userData.id = props.id;
-  model = updateProperties(props, prevProps, defaultProps3, model, propertyNames);
   if (props.coords && !deepEqual(props.coords, prevProps.coords)) {
     model.setCoords(props.coords);
   }
@@ -1126,6 +1101,9 @@ var rerenderModel = (model, props, prevProps, defaultProps3) => {
     model.playAnimation(props.animationOptions);
   } else if (!props.animationOptions && prevProps.animationOptions) {
     model.stop();
+  }
+  if (props.feature && !deepEqual(props.feature, prevProps.feature)) {
+    model.userData.feature = { ...model.userData.feature, ...props.feature };
   }
   if (props.pathOptions && !deepEqual(props.pathOptions, prevProps.pathOptions)) {
     const finishCb = () => {
@@ -1149,6 +1127,28 @@ var rerenderModel = (model, props, prevProps, defaultProps3) => {
         model.addEventListener(eventName, eventProps, false);
       }
     }
+  }
+  model.name = props.id;
+  model.userData.id = props.id;
+  model = updateProperties(props, prevProps, defaultProps3, model, propertyNames);
+};
+var addModel = (tb, props, model) => {
+  const currentScale = model.scale.z;
+  const originZ = currentScale / 2;
+  const targetZ = currentScale;
+  const renderingEffect = props.renderingEffect;
+  if (renderingEffect) {
+    model.scale.z = originZ;
+  }
+  setTimeout(() => {
+    tb.add(model, props.layerId);
+  }, 50);
+  if (renderingEffect) {
+    const duration = (renderingEffect.duration || 500) / 1e3;
+    const ease = renderingEffect.easing || ((t) => t);
+    setTimeout(() => {
+      import_gsap.gsap.to(model.scale, { z: targetZ, duration, ease });
+    }, 100);
   }
 };
 var defaultProps2 = {
@@ -1210,8 +1210,229 @@ var ModelRenderer = ({
   return null;
 };
 
-// src/modules/react-threebox/components/label-renderer.tsx
+// src/modules/react-threebox/components/model-batch-loader.tsx
+var React10 = __toESM(require("react"));
+var import_gsap2 = require("gsap");
+
+// src/modules/react-threebox/hooks/use-model-reconciliation.ts
 var React9 = __toESM(require("react"));
+var useModelReconciliation = ({
+  items,
+  onDiffCalculated
+}) => {
+  const renderedInstancesRef = React9.useRef(/* @__PURE__ */ new Map());
+  const loadedModelsRef = React9.useRef(/* @__PURE__ */ new Map());
+  const previousItemsRef = React9.useRef([]);
+  const calculateDiff = React9.useCallback(
+    (currentItems, previousItems) => {
+      const currentRenderersMap = /* @__PURE__ */ new Map();
+      const previousRenderersMap = /* @__PURE__ */ new Map();
+      currentItems.forEach((item) => {
+        item.renderers.forEach((renderer2) => {
+          currentRenderersMap.set(renderer2.id, { item, renderer: renderer2 });
+        });
+      });
+      previousItems.forEach((item) => {
+        item.renderers.forEach((renderer2) => {
+          previousRenderersMap.set(renderer2.id, true);
+        });
+      });
+      const toAdd = [];
+      const toRemove = [];
+      const toKeep = [];
+      currentRenderersMap.forEach((value, rendererId) => {
+        if (!previousRenderersMap.has(rendererId)) {
+          toAdd.push(value);
+        } else {
+          toKeep.push(rendererId);
+        }
+      });
+      previousRenderersMap.forEach((_, rendererId) => {
+        if (!currentRenderersMap.has(rendererId)) {
+          toRemove.push(rendererId);
+        }
+      });
+      return { toAdd, toRemove, toKeep };
+    },
+    []
+  );
+  const diff = React9.useMemo(() => {
+    const result = calculateDiff(items, previousItemsRef.current);
+    previousItemsRef.current = items;
+    onDiffCalculated?.(result);
+    return result;
+  }, [items, calculateDiff, onDiffCalculated]);
+  const markAsRendered = React9.useCallback((rendererId, instance) => {
+    renderedInstancesRef.current.set(rendererId, instance);
+  }, []);
+  const markAsRemoved = React9.useCallback((rendererId) => {
+    renderedInstancesRef.current.delete(rendererId);
+  }, []);
+  const cacheModel = React9.useCallback((loaderId, model) => {
+    loadedModelsRef.current.set(loaderId, model);
+  }, []);
+  const getCachedModel = React9.useCallback((loaderId) => {
+    return loadedModelsRef.current.get(loaderId);
+  }, []);
+  const clearCache = React9.useCallback(() => {
+    renderedInstancesRef.current.clear();
+    loadedModelsRef.current.clear();
+    previousItemsRef.current = [];
+  }, []);
+  return {
+    diff,
+    renderedInstances: renderedInstancesRef.current,
+    loadedModels: loadedModelsRef.current,
+    markAsRendered,
+    markAsRemoved,
+    cacheModel,
+    getCachedModel,
+    clearCache
+  };
+};
+
+// src/modules/react-threebox/components/model-batch-loader.tsx
+var addModelToScene = (tb, model, renderer2, layerId) => {
+  const currentScale = model.scale.z;
+  const originZ = currentScale / 2;
+  const targetZ = currentScale;
+  const renderingEffect = renderer2.renderingEffect;
+  if (renderingEffect) {
+    model.scale.z = originZ;
+  }
+  model.name = renderer2.id;
+  model.userData.id = renderer2.id;
+  if (renderer2.coords) {
+    model.setCoords(renderer2.coords);
+  }
+  if (renderer2.rotation) {
+    model.setRotation(renderer2.rotation);
+  }
+  if (renderer2.scale) {
+    model.setScale(renderer2.scale);
+  }
+  tb.add(model, layerId);
+};
+var ModelBatchLoader = ({
+  items,
+  batchSize = 5,
+  onComplete,
+  onError
+}) => {
+  const { threebox, map } = React10.useContext(ThreeboxContext) || {};
+  const { layerId } = React10.useContext(ThreeboxLayerContext) || {};
+  const tb = threebox?.getThreebox();
+  const {
+    diff,
+    markAsRendered,
+    markAsRemoved,
+    cacheModel,
+    getCachedModel,
+    clearCache
+  } = useModelReconciliation({
+    items,
+    onDiffCalculated: (diff2) => {
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[ModelBatchLoader] Reconciliation - Keep: ${diff2.toKeep.length}, Add: ${diff2.toAdd.length}, Remove: ${diff2.toRemove.length}`);
+      }
+    }
+  });
+  const loadModelsBatch = React10.useCallback(
+    async (batch) => {
+      if (!tb) return [];
+      const promises = batch.map(async (item) => {
+        try {
+          const loaderId = item.loader.id;
+          const cachedModel = getCachedModel(loaderId);
+          if (cachedModel) {
+            return { model: cachedModel, loaderId };
+          }
+          const model = await tb.loadObj(item.loader);
+          model.userData.model = { ...item.loader };
+          cacheModel(loaderId, model);
+          return { model, loaderId };
+        } catch (error) {
+          console.error(`Error loading model ${item.loader.id}:`, error);
+          onError?.(error);
+          return null;
+        }
+      });
+      const results = await Promise.all(promises);
+      return results.filter((r) => r !== null);
+    },
+    [tb, onError, getCachedModel, cacheModel]
+  );
+  const processItems = React10.useCallback(async () => {
+    if (!tb || !map?.style?._loaded) return;
+    try {
+      const { toAdd, toRemove, toKeep } = diff;
+      toRemove.forEach((rendererId) => {
+        try {
+          tb.removeByName(rendererId);
+          markAsRemoved(rendererId);
+        } catch (error) {
+          console.error(`Error removing model ${rendererId}:`, error);
+        }
+      });
+      if (toAdd.length > 0) {
+        const loaderMap = /* @__PURE__ */ new Map();
+        toAdd.forEach(({ item, renderer: renderer2 }) => {
+          if (!loaderMap.has(item.loader.id)) {
+            loaderMap.set(item.loader.id, { item, renderers: [] });
+          }
+          loaderMap.get(item.loader.id).renderers.push(renderer2);
+        });
+        const uniqueItems = Array.from(loaderMap.values()).map((v) => v.item);
+        const batches = [];
+        for (let i = 0; i < uniqueItems.length; i += batchSize) {
+          batches.push(uniqueItems.slice(i, i + batchSize));
+        }
+        for (let i = 0; i < batches.length; i++) {
+          const batch = batches[i];
+          const loadedBatch = await loadModelsBatch(batch);
+          const addPromises = loadedBatch.map(async ({ model, loaderId }) => {
+            const loaderData = loaderMap.get(loaderId);
+            if (!loaderData) return;
+            loaderData.renderers.forEach((renderer2) => {
+              const duplicateModel = model.duplicate();
+              addModelToScene(tb, duplicateModel, renderer2, layerId);
+              markAsRendered(renderer2.id, duplicateModel);
+            });
+          });
+          await Promise.all(addPromises);
+          if (i < batches.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 16));
+          }
+        }
+      }
+      onComplete?.();
+    } catch (error) {
+      console.error("Batch loading error:", error);
+      onError?.(error);
+    }
+  }, [tb, map, diff, batchSize, loadModelsBatch, layerId, markAsRendered, markAsRemoved, onComplete, onError]);
+  React10.useEffect(() => {
+    processItems();
+  }, [processItems]);
+  React10.useEffect(() => {
+    return () => {
+      if (tb) {
+        diff.toKeep.forEach((rendererId) => {
+          try {
+            tb.removeByName(rendererId);
+          } catch (error) {
+            console.error(`Error removing model ${rendererId}:`, error);
+          }
+        });
+        clearCache();
+      }
+    };
+  }, [tb, clearCache]);
+  return null;
+};
+
+// src/modules/react-threebox/components/label-renderer.tsx
+var React11 = __toESM(require("react"));
 var ReactDOM = __toESM(require("react-dom"));
 var addLabel = (tb, props, htmlElement, model) => {
   if (model) {
@@ -1229,31 +1450,31 @@ var rerenderLabel = (label, props, prevProps) => {
   }
 };
 var labelCount = 0;
-var LabelRenderer = React9.memo(
-  React9.forwardRef(
+var LabelRenderer = React11.memo(
+  React11.forwardRef(
     ({ model, onOpen, onClose, onError, children, ...props }, ref) => {
-      const { threebox } = React9.useContext(ThreeboxContext) || {};
-      const { layerId } = React9.useContext(ThreeboxLayerContext) || {};
+      const { threebox } = React11.useContext(ThreeboxContext) || {};
+      const { layerId } = React11.useContext(ThreeboxLayerContext) || {};
       const tb = threebox?.getThreebox();
-      const propsRef = React9.useRef({});
-      const { current: modelRef } = React9.useRef(model);
-      const labelRef = React9.useRef(null);
-      const isRendered = React9.useRef(false);
-      const renderProps = React9.useMemo(() => {
+      const propsRef = React11.useRef({});
+      const { current: modelRef } = React11.useRef(model);
+      const labelRef = React11.useRef(null);
+      const isRendered = React11.useRef(false);
+      const renderProps = React11.useMemo(() => {
         return {
           ...props,
           id: props.id || `label-renderer-${labelCount++}`,
           layerId
         };
       }, [props, layerId]);
-      const container = React9.useMemo(() => {
+      const container = React11.useMemo(() => {
         const div = document.createElement("div");
         div.className = "label-content";
         div.style.pointerEvents = "auto";
         div.style.cursor = "pointer";
         return div;
       }, []);
-      React9.useEffect(() => {
+      React11.useEffect(() => {
         if (tb) {
           return () => {
             try {
@@ -1272,7 +1493,7 @@ var LabelRenderer = React9.memo(
         }
         return void 0;
       }, [tb]);
-      React9.useEffect(() => {
+      React11.useEffect(() => {
         try {
           if (!isRendered.current && container && tb) {
             labelRef.current = addLabel(tb, renderProps, container, modelRef);
@@ -1288,21 +1509,21 @@ var LabelRenderer = React9.memo(
         }
         propsRef.current = renderProps;
       }, [tb, renderProps, container]);
-      React9.useEffect(() => {
+      React11.useEffect(() => {
         applyReactStyle(container, props.style);
       }, [container, props.style]);
-      React9.useImperativeHandle(ref, () => labelRef.current, []);
+      React11.useImperativeHandle(ref, () => labelRef.current, []);
       return ReactDOM.createPortal(children, container);
     }
   )
 );
 
 // src/modules/react-threebox/components/model-batcher.tsx
-var React10 = __toESM(require("react"));
+var React12 = __toESM(require("react"));
 var import_jsx_runtime4 = require("react/jsx-runtime");
 var useShouldRender = (batchIndex, batchSize, batchDelay) => {
-  const [shouldRender, setShouldRender] = React10.useState(false);
-  React10.useEffect(() => {
+  const [shouldRender, setShouldRender] = React12.useState(false);
+  React12.useEffect(() => {
     const delay = Math.floor(batchIndex / batchSize) * batchDelay;
     const timer = setTimeout(() => setShouldRender(true), delay);
     return () => clearTimeout(timer);
@@ -1661,7 +1882,8 @@ var transformRenderer = (item) => ({
   id: item.id,
   coords: [item.geometry.coordinates[0], item.geometry.coordinates[1]],
   rotation: { x: item.rotation[0], y: item.rotation[1], z: item.rotation[2] },
-  renderingEffect: { duration: 500 }
+  renderingEffect: { duration: 500 },
+  feature: { type: "Feature", geometry: item.geometry, properties: item.properties }
 });
 var ModelLayer = (props) => {
   const { layout, paint, ...layerProps } = props;
@@ -1716,7 +1938,7 @@ var ModelLayer = (props) => {
     }, [map, props.id, processFeatures]),
     500
   );
-  const forceUpdate = (0, import_react5.useCallback)(() => {
+  const forceUpdate = import_react5.default.useCallback(() => {
     if (!map) return;
     const newStyle = map.getStyle();
     const { added, changed } = diffLayers(previousStyle.current, newStyle);
@@ -1750,7 +1972,7 @@ var ModelLayer = (props) => {
     }, /* @__PURE__ */ new Map());
     return Array.from(modelMap.values());
   }, [modelsInViewBox]);
-  const ModelItems = (0, import_react5.useMemo)(() => {
+  const ModelItems = import_react5.default.useMemo(() => {
     if (styleLoaded === 0) return null;
     return modelItems.map((l) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ModelLoader, { ...l.loader, children: l.renderers.map((r) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ModelRenderer, { ...r }, r.id)) }, l.loader.id));
   }, [modelItems, styleLoaded]);
@@ -1761,7 +1983,7 @@ var ModelLayer = (props) => {
 };
 
 // src/modules/react-threejs/components/effect-canvas.tsx
-var React13 = __toESM(require("react"));
+var React15 = __toESM(require("react"));
 var import_maplibre6 = require("react-map-gl/maplibre");
 
 // src/modules/react-threejs/threejs/graphics/effect-manager.ts
@@ -3312,15 +3534,15 @@ var EffectManager = class {
 
 // src/modules/react-threejs/components/effect-canvas.tsx
 var import_jsx_runtime7 = require("react/jsx-runtime");
-var EffectCanvasContext = React13.createContext(null);
+var EffectCanvasContext = React15.createContext(null);
 var _EffectCanvas = (props, ref) => {
   const { id, mapId, children, onError, onLoad, ...options } = props;
   const mapRef = (0, import_maplibre6.useMap)();
-  const [effectManager, setEffectManager] = React13.useState(null);
-  const optionsRef = React13.useRef(options);
-  const { current: contextValue } = React13.useRef({});
-  const canvasOptions = React13.useMemo(() => options, [Object.values(options).join(",")]);
-  React13.useEffect(() => {
+  const [effectManager, setEffectManager] = React15.useState(null);
+  const optionsRef = React15.useRef(options);
+  const { current: contextValue } = React15.useRef({});
+  const canvasOptions = React15.useMemo(() => options, [Object.values(options).join(",")]);
+  React15.useEffect(() => {
     let isMounted = true;
     let effectInstance = null;
     const mapInstance = mapRef?.[mapId || "current"]?.getMap();
@@ -3365,13 +3587,13 @@ var _EffectCanvas = (props, ref) => {
       optionsRef.current = options;
     }
   }, [options, effectManager]);
-  React13.useImperativeHandle(ref, () => contextValue, [effectManager]);
+  React15.useImperativeHandle(ref, () => contextValue, [effectManager]);
   return effectManager && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(EffectCanvasContext.Provider, { value: contextValue, children });
 };
-var EffectCanvas = React13.forwardRef(_EffectCanvas);
+var EffectCanvas = React15.forwardRef(_EffectCanvas);
 
 // src/modules/react-threejs/components/bloom-line.tsx
-var React14 = __toESM(require("react"));
+var React16 = __toESM(require("react"));
 
 // src/modules/react-threejs/threejs/objects/bloom-line/bloom-line-geometry.ts
 var THREE9 = __toESM(require("three"));
@@ -3434,11 +3656,11 @@ var BloomLine = class extends import_Line2.Line2 {
 
 // src/modules/react-threejs/components/bloom-line.tsx
 var import_jsx_runtime8 = require("react/jsx-runtime");
-var MeshContext = React14.createContext({ mesh: null });
+var MeshContext = React16.createContext({ mesh: null });
 var _LineMesh = ({ children }) => {
-  const { group, bloom } = React14.useContext(EffectCanvasContext) || {};
-  const [mesh] = React14.useState(new BloomLine());
-  React14.useEffect(() => {
+  const { group, bloom } = React16.useContext(EffectCanvasContext) || {};
+  const [mesh] = React16.useState(new BloomLine());
+  React16.useEffect(() => {
     if (mesh && group && bloom) {
       try {
         group.add(mesh);
@@ -3457,10 +3679,10 @@ var _LineMesh = ({ children }) => {
   return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MeshContext.Provider, { value: { mesh }, children });
 };
 var _LineGeometry = (props) => {
-  const { mesh } = React14.useContext(MeshContext) || {};
-  const [geometry] = React14.useState(new BloomLineGeometry());
-  const memorizedProps = React14.useMemo(() => props, [props.geometry?.join(",")]);
-  React14.useEffect(() => {
+  const { mesh } = React16.useContext(MeshContext) || {};
+  const [geometry] = React16.useState(new BloomLineGeometry());
+  const memorizedProps = React16.useMemo(() => props, [props.geometry?.join(",")]);
+  React16.useEffect(() => {
     if (mesh && geometry) {
       if (mesh.geometry) {
         mesh.geometry.dispose();
@@ -3484,10 +3706,10 @@ var _LineGeometry = (props) => {
   return null;
 };
 var _LineMaterial = (props) => {
-  const { mesh } = React14.useContext(MeshContext) || {};
-  const [material] = React14.useState(new BloomLineMaterial(props));
-  const memorizedProps = React14.useMemo(() => props, [Object.values(props).join(",")]);
-  React14.useEffect(() => {
+  const { mesh } = React16.useContext(MeshContext) || {};
+  const [material] = React16.useState(new BloomLineMaterial(props));
+  const memorizedProps = React16.useMemo(() => props, [Object.values(props).join(",")]);
+  React16.useEffect(() => {
     if (mesh && material) {
       if (mesh.material) {
         mesh.material.dispose();
@@ -3509,7 +3731,7 @@ var _LineMaterial = (props) => {
 };
 
 // src/modules/react-threejs/components/extrude-wall.tsx
-var React15 = __toESM(require("react"));
+var React17 = __toESM(require("react"));
 
 // src/modules/react-threejs/threejs/objects/extrude-wall/extrude-wall-geometry.ts
 var THREE11 = __toESM(require("three"));
@@ -3626,11 +3848,11 @@ var ExtrudeWall = class extends THREE13.Mesh {
 
 // src/modules/react-threejs/components/extrude-wall.tsx
 var import_jsx_runtime9 = require("react/jsx-runtime");
-var MeshContext2 = React15.createContext({ mesh: null });
+var MeshContext2 = React17.createContext({ mesh: null });
 var _WallMesh = ({ children }) => {
-  const { group, bloom } = React15.useContext(EffectCanvasContext) || {};
-  const [mesh] = React15.useState(new ExtrudeWall());
-  React15.useEffect(() => {
+  const { group, bloom } = React17.useContext(EffectCanvasContext) || {};
+  const [mesh] = React17.useState(new ExtrudeWall());
+  React17.useEffect(() => {
     if (mesh && group && bloom) {
       try {
         group.add(mesh);
@@ -3649,10 +3871,10 @@ var _WallMesh = ({ children }) => {
   return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(MeshContext2.Provider, { value: { mesh }, children });
 };
 var _WallGeometry = (props) => {
-  const { mesh } = React15.useContext(MeshContext2) || {};
-  const [geometry] = React15.useState(new ExtrudeWallGeometry());
-  const memorizedProps = React15.useMemo(() => props, [props.geometry?.join(","), props.height]);
-  React15.useEffect(() => {
+  const { mesh } = React17.useContext(MeshContext2) || {};
+  const [geometry] = React17.useState(new ExtrudeWallGeometry());
+  const memorizedProps = React17.useMemo(() => props, [props.geometry?.join(","), props.height]);
+  React17.useEffect(() => {
     if (mesh && geometry) {
       if (mesh.geometry) {
         mesh.geometry.dispose();
@@ -3676,10 +3898,10 @@ var _WallGeometry = (props) => {
   return null;
 };
 var _WallMaterial = (props) => {
-  const { mesh } = React15.useContext(MeshContext2) || {};
-  const [material] = React15.useState(new ExtrudeWallMaterial(props));
-  const memorizedProps = React15.useMemo(() => props, [Object.values(props).join(",")]);
-  React15.useEffect(() => {
+  const { mesh } = React17.useContext(MeshContext2) || {};
+  const [material] = React17.useState(new ExtrudeWallMaterial(props));
+  const memorizedProps = React17.useMemo(() => props, [Object.values(props).join(",")]);
+  React17.useEffect(() => {
     if (mesh && material) {
       if (mesh.material && !Array.isArray(mesh.material)) {
         mesh.material.dispose();
@@ -3713,6 +3935,7 @@ var THREE14 = require("three");
   ExtrudeWallGeometry,
   ExtrudeWallMaterial,
   LabelRenderer,
+  ModelBatchLoader,
   ModelBatcher,
   ModelLayer,
   ModelLoader,
