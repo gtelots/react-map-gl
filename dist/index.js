@@ -1988,7 +1988,7 @@ var ModelLayer = (props) => {
     return modelItems.map((l) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ModelLoader, { ...l.loader, children: l.renderers.map((r) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ModelRenderer, { ...r }, r.id)) }, l.loader.id));
   }, [modelItems, styleLoaded]);
   return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_react5.default.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_maplibre5.Layer, { type: "circle", ...layerProps }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_maplibre5.Layer, { type: "fill", ...layerProps }),
     /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ThreeboxLayer, { id, beforeId: props.beforeId, children: ModelItems })
   ] });
 };

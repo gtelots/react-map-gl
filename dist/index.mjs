@@ -1933,7 +1933,7 @@ var ModelLayer = (props) => {
     return modelItems.map((l) => /* @__PURE__ */ jsx6(ModelLoader, { ...l.loader, children: l.renderers.map((r) => /* @__PURE__ */ jsx6(ModelRenderer, { ...r }, r.id)) }, l.loader.id));
   }, [modelItems, styleLoaded]);
   return /* @__PURE__ */ jsxs(React14.Fragment, { children: [
-    /* @__PURE__ */ jsx6(Layer, { type: "circle", ...layerProps }),
+    /* @__PURE__ */ jsx6(Layer, { type: "fill", ...layerProps }),
     /* @__PURE__ */ jsx6(ThreeboxLayer, { id, beforeId: props.beforeId, children: ModelItems })
   ] });
 };
