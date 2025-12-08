@@ -1927,7 +1927,6 @@ var ModelLayer = (props) => {
     }, /* @__PURE__ */ new Map());
     return Array.from(modelMap.values());
   }, [modelsInViewBox]);
-  console.log(modelItems);
   const ModelItems = React14.useMemo(() => {
     if (styleLoaded === 0) return null;
     return modelItems.map((l) => /* @__PURE__ */ jsx6(ModelLoader, { ...l.loader, children: l.renderers.map((r) => /* @__PURE__ */ jsx6(ModelRenderer, { ...r }, r.id)) }, l.loader.id));

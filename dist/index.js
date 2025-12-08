@@ -1982,7 +1982,6 @@ var ModelLayer = (props) => {
     }, /* @__PURE__ */ new Map());
     return Array.from(modelMap.values());
   }, [modelsInViewBox]);
-  console.log(modelItems);
   const ModelItems = import_react5.default.useMemo(() => {
     if (styleLoaded === 0) return null;
     return modelItems.map((l) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ModelLoader, { ...l.loader, children: l.renderers.map((r) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ModelRenderer, { ...r }, r.id)) }, l.loader.id));
