@@ -6,7 +6,7 @@ import * as maplibre_gl from 'maplibre-gl';
 import { CustomLayerInterface, Popup, Map, PopupOptions, FilterSpecification } from 'maplibre-gl';
 export { CustomLayerInterface as CustomLayerOptions, CustomRenderMethodInput as CustomRenderOptions, Map as MapboxInstance } from 'maplibre-gl';
 import * as react_map_gl_dist_esm_exports_maplibre from 'react-map-gl/dist/esm/exports-maplibre';
-import { Point, Position } from 'geojson';
+import { Feature as Feature$1, Point, Position } from 'geojson';
 import { Threebox as Threebox$1 } from 'threebox-plugin';
 export { Threebox as ThreeboxInstance } from 'threebox-plugin';
 import * as THREE from 'three';
@@ -241,7 +241,7 @@ type ModelRendererOptions = {
     /**
      * GeoJson feature instance. properties object of the GeoJson standard feature could be used to store relavant data
      */
-    feature?: GeoJSON.Feature<Point, Record<string, any>>;
+    feature?: Feature$1<Point, Record<string, any>>;
     /**
      * Effect to apply when rendering the model (e.g., fade-in effect).
      */
@@ -618,6 +618,13 @@ type ThreeboxRef = Threebox$1 & {
     [key: string]: any;
 };
 
+type ThreeboxProps = ThreeboxPluginOptions & {
+    id?: string;
+    mapId?: string;
+    children?: React$1.ReactNode;
+    onLoad?: () => void;
+    onError?: (error: Error) => void;
+};
 declare const Threebox: React$1.ForwardRefExoticComponent<ThreeboxPluginOptions & {
     id?: string;
     mapId?: string;
@@ -761,4 +768,4 @@ declare const _WallMesh: React$1.FC<WallMeshProps>;
 declare const _WallGeometry: React$1.FC<ExtrudeWallGeometryParams>;
 declare const _WallMaterial: React$1.FC<ExtrudeWallMaterialParams>;
 
-export { type ArrayPropertySpecification, type BasePropertySpecification, _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, type BooleanPropertySpecification, CustomLayer, type DataDrivenPropertyValueSpecification, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, type EnumPropertySpecification, type ExpressionParameter, type ExpressionSpecification, type ExpressionSpecificationArray, type ExpressionType, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type Feature, type GlobalProperties, LabelRenderer, type LabelRendererOptions, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatchLoader, ModelBatcher, type ModelFeatureProperties, ModelLayer, type ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, ModelRenderer, type ModelRendererOptions, type ModelSouceSpecification, ModelSource, type ModelTypes, type ModelUnits, type NumberPropertySpecification, PopupAnimation, type PopupAnimationProps, type PropertyValueSpecification, type StringPropertySpecification, type StylePropertySpecification, Threebox, ThreeboxLayer, type ThreeboxPluginOptions, ThreeboxProvider, useLineAnimation, useThreebox };
+export { type ArrayPropertySpecification, type BasePropertySpecification, _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, type BooleanPropertySpecification, CustomLayer, type DataDrivenPropertyValueSpecification, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, type EnumPropertySpecification, type ExpressionParameter, type ExpressionSpecification, type ExpressionSpecificationArray, type ExpressionType, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type Feature, type GlobalProperties, LabelRenderer, type LabelRendererOptions, type LabelRendererProps, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatchLoader, type ModelBatchLoaderProps, ModelBatcher, type ModelBatcherProps, type ModelFeatureProperties, ModelLayer, type ModelLayerProps, type ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, type ModelLoaderProps, ModelRenderer, type ModelRendererOptions, type ModelRendererProps, type ModelSouceSpecification, ModelSource, type ModelSourceProps, type ModelTypes, type ModelUnits, type NumberPropertySpecification, PopupAnimation, type PopupAnimationProps, type PropertyValueSpecification, type StringPropertySpecification, type StylePropertySpecification, Threebox, ThreeboxLayer, type ThreeboxLayerProps, type ThreeboxPluginOptions, type ThreeboxProps, ThreeboxProvider, type ThreeboxRef, useLineAnimation, useThreebox };

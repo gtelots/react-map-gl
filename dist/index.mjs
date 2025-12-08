@@ -1827,8 +1827,8 @@ var transformRenderer = (item) => ({
   id: item.id,
   coords: [item.geometry.coordinates[0], item.geometry.coordinates[1]],
   rotation: { x: item.rotation[0], y: item.rotation[1], z: item.rotation[2] },
-  renderingEffect: { duration: 500 },
-  feature: { type: "Feature", geometry: item.geometry, properties: item.properties }
+  feature: { type: "Feature", geometry: item.geometry, properties: item.properties },
+  renderingEffect: { duration: 500 }
 });
 var ModelLayer = (props) => {
   const { layout, paint, ...layerProps } = props;
