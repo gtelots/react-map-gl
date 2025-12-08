@@ -6,7 +6,7 @@ import * as maplibre_gl from 'maplibre-gl';
 import { CustomLayerInterface, Popup, Map, PopupOptions, FilterSpecification } from 'maplibre-gl';
 export { CustomLayerInterface as CustomLayerOptions, CustomRenderMethodInput as CustomRenderOptions, Map as MapboxInstance } from 'maplibre-gl';
 import * as react_map_gl_dist_esm_exports_maplibre from 'react-map-gl/dist/esm/exports-maplibre';
-import { Feature as Feature$1, Point, Position } from 'geojson';
+import { Position, Feature as Feature$1, Point } from 'geojson';
 import { Threebox as Threebox$1 } from 'threebox-plugin';
 export { Threebox as ThreeboxInstance } from 'threebox-plugin';
 import * as THREE from 'three';
@@ -145,6 +145,7 @@ type ModelLoaderOptions = {
      * adjustment param must be provided in units per axis (i.e. adjustment: {x: 0.5, y: 0.5, z: 0}),
      * so the model will correct the center position of the object
      * @default 1
+     * @deprecated Don't use adjustment, models should be centered in their 3D software instead
      */
     adjustment?: number | Vector3;
     /** This param allows to normalize specular values from some 3D models
@@ -187,7 +188,7 @@ type ModelRendererOptions = {
     /** Layer ID to which to add the model */
     layerId?: string;
     /** Position to which to move the object */
-    coords?: [number, number, number] | [number, number];
+    coords?: [number, number, number] | [number, number] | number[] | Position;
     /** Rotation(s) to set the object, in units of degrees */
     rotation?: number | Vector3;
     /** Scale(s) to set the object, where 1 is the default scale */
@@ -311,7 +312,7 @@ type LabelRendererOptions = {
     /** Layer ID to which to add the model */
     layerId?: string;
     /** Position to which to move the object */
-    coords?: [number, number, number] | [number, number];
+    coords?: [number, number, number] | [number, number] | number[] | Position;
     /** Style for the label */
     style?: React.CSSProperties;
 };

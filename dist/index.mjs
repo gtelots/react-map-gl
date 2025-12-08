@@ -1807,25 +1807,35 @@ function diffLayers(prevStyle, newStyle) {
 
 // src/modules/react-threebox/components/model-layer.tsx
 import { jsx as jsx6, jsxs } from "react/jsx-runtime";
+var countMeshes = (model) => {
+  let meshCount = 0;
+  model.traverse((child) => {
+    if (child.isMesh) meshCount++;
+  });
+  return meshCount;
+};
+var calculateCoordinates = (translation, coords) => {
+  return [
+    coords[0] + translation[0],
+    coords[1] + translation[1],
+    (coords[2] || 0) + (translation[2] || 0)
+  ];
+};
 var transformLoader = (item) => ({
   id: item.model,
   type: "glb",
   obj: item.model,
   scale: { x: item.scale[0], y: item.scale[1], z: item.scale[2] },
-  adjustment: { x: item.translation[0], y: item.translation[1], z: item.translation[2] },
   onLoad: (model) => {
-    let meshCount = 0;
-    model.traverse((child) => {
-      if (child.isMesh) meshCount++;
-    });
     if (process.env.NODE_ENV === "development") {
+      const meshCount = countMeshes(model);
       console.warn("Mesh count:", meshCount);
     }
   }
 });
 var transformRenderer = (item) => ({
   id: item.id,
-  coords: [item.geometry.coordinates[0], item.geometry.coordinates[1]],
+  coords: calculateCoordinates(item.translation, item.geometry.coordinates),
   rotation: { x: item.rotation[0], y: item.rotation[1], z: item.rotation[2] },
   feature: { type: "Feature", geometry: item.geometry, properties: item.properties },
   renderingEffect: { duration: 500 }
@@ -1917,12 +1927,13 @@ var ModelLayer = (props) => {
     }, /* @__PURE__ */ new Map());
     return Array.from(modelMap.values());
   }, [modelsInViewBox]);
+  console.log(modelItems);
   const ModelItems = React14.useMemo(() => {
     if (styleLoaded === 0) return null;
     return modelItems.map((l) => /* @__PURE__ */ jsx6(ModelLoader, { ...l.loader, children: l.renderers.map((r) => /* @__PURE__ */ jsx6(ModelRenderer, { ...r }, r.id)) }, l.loader.id));
   }, [modelItems, styleLoaded]);
   return /* @__PURE__ */ jsxs(React14.Fragment, { children: [
-    /* @__PURE__ */ jsx6(Layer, { type: "fill", ...layerProps }),
+    /* @__PURE__ */ jsx6(Layer, { type: "circle", ...layerProps }),
     /* @__PURE__ */ jsx6(ThreeboxLayer, { id, beforeId: props.beforeId, children: ModelItems })
   ] });
 };
