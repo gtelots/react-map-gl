@@ -906,25 +906,25 @@ var updateModel = (model, props, prevProps) => {
   if (props.anchor !== prevProps.anchor) {
     model.setAnchor(props.anchor);
   }
-  model.userData.model = { ...model.userData.model, ...props };
+  model.userData.loader = { ...model.userData.loader, ...props };
   return model;
 };
 var createModel = async (tb, props) => {
   if (tb) {
     const model = await tb.loadObj(props);
-    model.userData.model = { ...model.userData.model, ...props };
+    model.userData.loader = { ...model.userData.loader, ...props };
     return model;
   }
   return null;
 };
 var getModelById = (tb, id) => {
   return tb?.world.children.find((child) => {
-    return child.userData.model?.id === id;
+    return child.userData.loader?.id === id;
   });
 };
 var getModelsById = (tb, id) => {
   return tb?.world.children.filter((child) => {
-    return child.userData.model?.id === id;
+    return child.userData.loader?.id === id;
   });
 };
 var modelCounter = 0;
@@ -970,7 +970,7 @@ var ModelLoader = ({
     props.type,
     props.units
   ]);
-  const loadModel = React7.useCallback(async () => {
+  const loadModel2 = React7.useCallback(async () => {
     if (!tb) return;
     const id = loaderProps.id;
     let model = map && map.style && map.style._loaded && getModelById(tb, id);
@@ -990,8 +990,8 @@ var ModelLoader = ({
     }
   }, [tb, map, loaderProps]);
   React7.useEffect(() => {
-    loadModel();
-  }, [loadModel]);
+    loadModel2();
+  }, [loadModel2]);
   const childrenWithModel = React7.useMemo(() => {
     return modelInstance && React7.Children.map(children, (child) => {
       if (child && React7.isValidElement(child)) {
@@ -1075,6 +1075,7 @@ var rerenderModel = (model, props, prevProps, defaultProps3) => {
   }
   model.name = props.id;
   model.userData.id = props.id;
+  model.userData.renderer = { ...model.userData.renderer, ...props };
   model = updateProperties(props, prevProps, defaultProps3, model, propertyNames);
 };
 var addModel = (tb, props, model) => {
@@ -1155,229 +1156,8 @@ var ModelRenderer = ({
   return null;
 };
 
-// src/modules/react-threebox/components/model-batch-loader.tsx
-import * as React10 from "react";
-import "gsap";
-
-// src/modules/react-threebox/hooks/use-model-reconciliation.ts
-import * as React9 from "react";
-var useModelReconciliation = ({
-  items,
-  onDiffCalculated
-}) => {
-  const renderedInstancesRef = React9.useRef(/* @__PURE__ */ new Map());
-  const loadedModelsRef = React9.useRef(/* @__PURE__ */ new Map());
-  const previousItemsRef = React9.useRef([]);
-  const calculateDiff = React9.useCallback(
-    (currentItems, previousItems) => {
-      const currentRenderersMap = /* @__PURE__ */ new Map();
-      const previousRenderersMap = /* @__PURE__ */ new Map();
-      currentItems.forEach((item) => {
-        item.renderers.forEach((renderer2) => {
-          currentRenderersMap.set(renderer2.id, { item, renderer: renderer2 });
-        });
-      });
-      previousItems.forEach((item) => {
-        item.renderers.forEach((renderer2) => {
-          previousRenderersMap.set(renderer2.id, true);
-        });
-      });
-      const toAdd = [];
-      const toRemove = [];
-      const toKeep = [];
-      currentRenderersMap.forEach((value, rendererId) => {
-        if (!previousRenderersMap.has(rendererId)) {
-          toAdd.push(value);
-        } else {
-          toKeep.push(rendererId);
-        }
-      });
-      previousRenderersMap.forEach((_, rendererId) => {
-        if (!currentRenderersMap.has(rendererId)) {
-          toRemove.push(rendererId);
-        }
-      });
-      return { toAdd, toRemove, toKeep };
-    },
-    []
-  );
-  const diff = React9.useMemo(() => {
-    const result = calculateDiff(items, previousItemsRef.current);
-    previousItemsRef.current = items;
-    onDiffCalculated?.(result);
-    return result;
-  }, [items, calculateDiff, onDiffCalculated]);
-  const markAsRendered = React9.useCallback((rendererId, instance) => {
-    renderedInstancesRef.current.set(rendererId, instance);
-  }, []);
-  const markAsRemoved = React9.useCallback((rendererId) => {
-    renderedInstancesRef.current.delete(rendererId);
-  }, []);
-  const cacheModel = React9.useCallback((loaderId, model) => {
-    loadedModelsRef.current.set(loaderId, model);
-  }, []);
-  const getCachedModel = React9.useCallback((loaderId) => {
-    return loadedModelsRef.current.get(loaderId);
-  }, []);
-  const clearCache = React9.useCallback(() => {
-    renderedInstancesRef.current.clear();
-    loadedModelsRef.current.clear();
-    previousItemsRef.current = [];
-  }, []);
-  return {
-    diff,
-    renderedInstances: renderedInstancesRef.current,
-    loadedModels: loadedModelsRef.current,
-    markAsRendered,
-    markAsRemoved,
-    cacheModel,
-    getCachedModel,
-    clearCache
-  };
-};
-
-// src/modules/react-threebox/components/model-batch-loader.tsx
-var addModelToScene = (tb, model, renderer2, layerId) => {
-  const currentScale = model.scale.z;
-  const originZ = currentScale / 2;
-  const targetZ = currentScale;
-  const renderingEffect = renderer2.renderingEffect;
-  if (renderingEffect) {
-    model.scale.z = originZ;
-  }
-  model.name = renderer2.id;
-  model.userData.id = renderer2.id;
-  if (renderer2.coords) {
-    model.setCoords(renderer2.coords);
-  }
-  if (renderer2.rotation) {
-    model.setRotation(renderer2.rotation);
-  }
-  if (renderer2.scale) {
-    model.setScale(renderer2.scale);
-  }
-  tb.add(model, layerId);
-};
-var ModelBatchLoader = ({
-  items,
-  batchSize = 5,
-  onComplete,
-  onError
-}) => {
-  const { threebox, map } = React10.useContext(ThreeboxContext) || {};
-  const { layerId } = React10.useContext(ThreeboxLayerContext) || {};
-  const tb = threebox?.getThreebox();
-  const {
-    diff,
-    markAsRendered,
-    markAsRemoved,
-    cacheModel,
-    getCachedModel,
-    clearCache
-  } = useModelReconciliation({
-    items,
-    onDiffCalculated: (diff2) => {
-      if (process.env.NODE_ENV === "development") {
-        console.log(`[ModelBatchLoader] Reconciliation - Keep: ${diff2.toKeep.length}, Add: ${diff2.toAdd.length}, Remove: ${diff2.toRemove.length}`);
-      }
-    }
-  });
-  const loadModelsBatch = React10.useCallback(
-    async (batch) => {
-      if (!tb) return [];
-      const promises = batch.map(async (item) => {
-        try {
-          const loaderId = item.loader.id;
-          const cachedModel = getCachedModel(loaderId);
-          if (cachedModel) {
-            return { model: cachedModel, loaderId };
-          }
-          const model = await tb.loadObj(item.loader);
-          model.userData.model = { ...item.loader };
-          cacheModel(loaderId, model);
-          return { model, loaderId };
-        } catch (error) {
-          console.error(`Error loading model ${item.loader.id}:`, error);
-          onError?.(error);
-          return null;
-        }
-      });
-      const results = await Promise.all(promises);
-      return results.filter((r) => r !== null);
-    },
-    [tb, onError, getCachedModel, cacheModel]
-  );
-  const processItems = React10.useCallback(async () => {
-    if (!tb || !map?.style?._loaded) return;
-    try {
-      const { toAdd, toRemove, toKeep } = diff;
-      toRemove.forEach((rendererId) => {
-        try {
-          tb.removeByName(rendererId);
-          markAsRemoved(rendererId);
-        } catch (error) {
-          console.error(`Error removing model ${rendererId}:`, error);
-        }
-      });
-      if (toAdd.length > 0) {
-        const loaderMap = /* @__PURE__ */ new Map();
-        toAdd.forEach(({ item, renderer: renderer2 }) => {
-          if (!loaderMap.has(item.loader.id)) {
-            loaderMap.set(item.loader.id, { item, renderers: [] });
-          }
-          loaderMap.get(item.loader.id).renderers.push(renderer2);
-        });
-        const uniqueItems = Array.from(loaderMap.values()).map((v) => v.item);
-        const batches = [];
-        for (let i = 0; i < uniqueItems.length; i += batchSize) {
-          batches.push(uniqueItems.slice(i, i + batchSize));
-        }
-        for (let i = 0; i < batches.length; i++) {
-          const batch = batches[i];
-          const loadedBatch = await loadModelsBatch(batch);
-          const addPromises = loadedBatch.map(async ({ model, loaderId }) => {
-            const loaderData = loaderMap.get(loaderId);
-            if (!loaderData) return;
-            loaderData.renderers.forEach((renderer2) => {
-              const duplicateModel = model.duplicate();
-              addModelToScene(tb, duplicateModel, renderer2, layerId);
-              markAsRendered(renderer2.id, duplicateModel);
-            });
-          });
-          await Promise.all(addPromises);
-          if (i < batches.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 16));
-          }
-        }
-      }
-      onComplete?.();
-    } catch (error) {
-      console.error("Batch loading error:", error);
-      onError?.(error);
-    }
-  }, [tb, map, diff, batchSize, loadModelsBatch, layerId, markAsRendered, markAsRemoved, onComplete, onError]);
-  React10.useEffect(() => {
-    processItems();
-  }, [processItems]);
-  React10.useEffect(() => {
-    return () => {
-      if (tb) {
-        diff.toKeep.forEach((rendererId) => {
-          try {
-            tb.removeByName(rendererId);
-          } catch (error) {
-            console.error(`Error removing model ${rendererId}:`, error);
-          }
-        });
-        clearCache();
-      }
-    };
-  }, [tb, clearCache]);
-  return null;
-};
-
 // src/modules/react-threebox/components/label-renderer.tsx
-import * as React11 from "react";
+import * as React9 from "react";
 import * as ReactDOM from "react-dom";
 var addLabel = (tb, props, htmlElement, model) => {
   if (model) {
@@ -1395,31 +1175,31 @@ var rerenderLabel = (label, props, prevProps) => {
   }
 };
 var labelCount = 0;
-var LabelRenderer = React11.memo(
-  React11.forwardRef(
+var LabelRenderer = React9.memo(
+  React9.forwardRef(
     ({ model, onOpen, onClose, onError, children, ...props }, ref) => {
-      const { threebox } = React11.useContext(ThreeboxContext) || {};
-      const { layerId } = React11.useContext(ThreeboxLayerContext) || {};
+      const { threebox } = React9.useContext(ThreeboxContext) || {};
+      const { layerId } = React9.useContext(ThreeboxLayerContext) || {};
       const tb = threebox?.getThreebox();
-      const propsRef = React11.useRef({});
-      const { current: modelRef } = React11.useRef(model);
-      const labelRef = React11.useRef(null);
-      const isRendered = React11.useRef(false);
-      const renderProps = React11.useMemo(() => {
+      const propsRef = React9.useRef({});
+      const { current: modelRef } = React9.useRef(model);
+      const labelRef = React9.useRef(null);
+      const isRendered = React9.useRef(false);
+      const renderProps = React9.useMemo(() => {
         return {
           ...props,
           id: props.id || `label-renderer-${labelCount++}`,
           layerId
         };
       }, [props, layerId]);
-      const container = React11.useMemo(() => {
+      const container = React9.useMemo(() => {
         const div = document.createElement("div");
         div.className = "label-content";
         div.style.pointerEvents = "auto";
         div.style.cursor = "pointer";
         return div;
       }, []);
-      React11.useEffect(() => {
+      React9.useEffect(() => {
         if (tb) {
           return () => {
             try {
@@ -1438,7 +1218,7 @@ var LabelRenderer = React11.memo(
         }
         return void 0;
       }, [tb]);
-      React11.useEffect(() => {
+      React9.useEffect(() => {
         try {
           if (!isRendered.current && container && tb) {
             labelRef.current = addLabel(tb, renderProps, container, modelRef);
@@ -1454,10 +1234,10 @@ var LabelRenderer = React11.memo(
         }
         propsRef.current = renderProps;
       }, [tb, renderProps, container]);
-      React11.useEffect(() => {
+      React9.useEffect(() => {
         applyReactStyle(container, props.style);
       }, [container, props.style]);
-      React11.useImperativeHandle(ref, () => labelRef.current, []);
+      React9.useImperativeHandle(ref, () => labelRef.current, []);
       return ReactDOM.createPortal(children, container);
     }
   )
@@ -1465,72 +1245,347 @@ var LabelRenderer = React11.memo(
 
 // src/modules/react-threebox/components/model-batcher.tsx
 import * as React12 from "react";
-import { jsx as jsx4 } from "react/jsx-runtime";
-var useShouldRender = (batchIndex, batchSize, batchDelay) => {
-  const [shouldRender, setShouldRender] = React12.useState(false);
-  React12.useEffect(() => {
-    const delay = Math.floor(batchIndex / batchSize) * batchDelay;
-    const timer = setTimeout(() => setShouldRender(true), delay);
-    return () => clearTimeout(timer);
-  }, [batchIndex, batchSize, batchDelay]);
-  return shouldRender;
+
+// src/modules/react-threebox/hooks/use-model-reconciliation.ts
+import * as React10 from "react";
+var calculateDiff = (currentItems, tbChildren) => {
+  if (tbChildren.size === 0) {
+    return { toAdd: currentItems, toRemove: [], toKeep: [], toUpdate: [] };
+  }
+  const toAdd = [];
+  const toRemove = [];
+  const toKeep = [];
+  const toUpdate = [];
+  const currentRenderersSet = /* @__PURE__ */ new Set();
+  for (let i = 0; i < currentItems.length; i++) {
+    const item = currentItems[i];
+    const renderers = item.renderers;
+    const renderersToAdd = [];
+    for (let j = 0; j < renderers.length; j++) {
+      const renderer2 = renderers[j];
+      const rendererId = renderer2.id;
+      currentRenderersSet.add(rendererId);
+      const existingModel = tbChildren.get(rendererId);
+      if (!existingModel) {
+        renderersToAdd.push(renderer2);
+      } else {
+        const needsUpdate = !deepEqual(renderer2, existingModel.userData.renderer);
+        if (needsUpdate) {
+          toUpdate.push(renderer2);
+        } else {
+          toKeep.push(rendererId);
+        }
+      }
+    }
+    if (renderersToAdd.length > 0) {
+      toAdd.push({ loader: item.loader, renderers: renderersToAdd });
+    }
+  }
+  tbChildren.forEach((_, rendererId) => {
+    if (!currentRenderersSet.has(rendererId)) {
+      toRemove.push(rendererId);
+    }
+  });
+  return { toAdd, toRemove, toKeep, toUpdate };
 };
-var BatchedModelRenderer = ({
-  batchIndex,
-  batchSize,
-  batchDelay,
-  ...props
+var useModelReconciliation = ({
+  tbChildren,
+  items
 }) => {
-  const shouldRender = useShouldRender(batchIndex, batchSize, batchDelay);
-  if (!shouldRender) return null;
-  return /* @__PURE__ */ jsx4(ModelRenderer, { ...props });
+  const diff = React10.useMemo(() => {
+    const result = calculateDiff(items, tbChildren);
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        `Keep: ${result.toKeep.length}`,
+        `Add: ${result.toAdd.flatMap((item) => item.renderers).length}`,
+        `Update: ${result.toUpdate.length}`,
+        `Remove: ${result.toRemove.length}`
+      );
+    }
+    return result;
+  }, [tbChildren, items, calculateDiff]);
+  return diff;
 };
-var BatchedModelLoader = ({
-  batchIndex,
-  batchSize,
-  batchDelay,
-  ...props
-}) => {
-  const shouldRender = useShouldRender(batchIndex, batchSize, batchDelay);
-  if (!shouldRender) return null;
-  return /* @__PURE__ */ jsx4(ModelLoader, { ...props });
+
+// src/modules/react-threebox/hooks/use-model-worker-pool.ts
+import * as React11 from "react";
+var workerCode = `
+  self.addEventListener('message', async (event) => {
+    const { type, id, url, options } = event.data;
+
+    if (type === 'LOAD_MODEL') {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(\`Failed to fetch model: \${response.statusText}\`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+
+        self.postMessage({
+          type: 'MODEL_LOADED',
+          id,
+          data: arrayBuffer,
+        });
+      } catch (error) {
+        self.postMessage({
+          type: 'MODEL_ERROR',
+          id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+  });
+`;
+var createWorkerPool = (size = 4) => {
+  const workers = [];
+  const pendingRequests = /* @__PURE__ */ new Map();
+  let currentWorkerIndex = 0;
+  for (let i = 0; i < size; i++) {
+    try {
+      const blob = new Blob([workerCode], { type: "application/javascript" });
+      const workerUrl = URL.createObjectURL(blob);
+      const worker = new Worker(workerUrl);
+      worker.addEventListener("message", (event) => {
+        const { type, id, data, error } = event.data;
+        const request = pendingRequests.get(id);
+        if (!request) return;
+        if (type === "MODEL_LOADED" && data) {
+          request.resolve(data);
+        } else if (type === "MODEL_ERROR") {
+          request.reject(new Error(error || "Unknown error"));
+        }
+        pendingRequests.delete(id);
+      });
+      worker.addEventListener("error", (error) => {
+        console.error("Worker error:", error);
+      });
+      workers.push(worker);
+    } catch (error) {
+      console.warn("Web Worker not supported, falling back to main thread:", error);
+    }
+  }
+  const loadModel2 = (id, url, options) => {
+    return new Promise((resolve, reject) => {
+      if (workers.length === 0) {
+        fetch(url).then((response) => response.arrayBuffer()).then(resolve).catch(reject);
+        return;
+      }
+      pendingRequests.set(id, { resolve, reject });
+      const worker = workers[currentWorkerIndex];
+      currentWorkerIndex = (currentWorkerIndex + 1) % workers.length;
+      worker.postMessage({
+        type: "LOAD_MODEL",
+        id,
+        url,
+        options
+      });
+      setTimeout(() => {
+        const request = pendingRequests.get(id);
+        if (request) {
+          request.reject(new Error("Model loading timeout"));
+          pendingRequests.delete(id);
+        }
+      }, 3e4);
+    });
+  };
+  const terminate = () => {
+    workers.forEach((worker) => worker.terminate());
+    workers.length = 0;
+    pendingRequests.clear();
+  };
+  return { loadModel: loadModel2, terminate };
 };
+var workerPool = null;
+var useModelWorkerPool = (poolSize = 4) => {
+  React11.useEffect(() => {
+    if (!workerPool) {
+      workerPool = createWorkerPool(poolSize);
+    }
+    return () => {
+      if (workerPool) {
+        workerPool.terminate();
+        workerPool = null;
+      }
+    };
+  }, [poolSize]);
+  return workerPool;
+};
+
+// src/modules/react-threebox/utils/model-operations.ts
+import { gsap as gsap2 } from "gsap";
+var loadModel = async (tb, props) => {
+  try {
+    const model = await tb.loadObj(props);
+    model.userData.loader = { ...model.userData.loader, ...props };
+    return model;
+  } catch (error) {
+    console.error(`Error loading model ${props.id}:`, error);
+    throw error;
+  }
+};
+var addModel2 = (tb, model, layerId) => {
+  try {
+    const currentScale = model.scale.z;
+    const originZ = currentScale / 2;
+    const targetZ = currentScale;
+    model.scale.z = originZ;
+    tb.add(model, layerId);
+    const duration = 500 / 1e3;
+    const ease = (t) => t;
+    gsap2.to(model.scale, { z: targetZ, duration, ease });
+  } catch (error) {
+    console.error("Error adding model:", error);
+  }
+};
+var renderModel = (model, renderer2) => {
+  try {
+    if (renderer2.coords) {
+      model.setCoords(renderer2.coords);
+    }
+    if (renderer2.rotation && typeof renderer2.rotation === "object") {
+      model.setRotation(renderer2.rotation);
+    }
+    if (renderer2.scale && typeof renderer2.scale === "object") {
+      const u = model.unitsPerMeter;
+      model.scale.set(renderer2.scale.x * u, renderer2.scale.y * u, renderer2.scale.z * u);
+    }
+    if (renderer2.feature) {
+      model.userData.feature = { ...model.userData.feature, ...renderer2.feature };
+    }
+    model.name = renderer2.id;
+    model.userData.id = renderer2.id;
+    model.userData.renderer = { ...model.userData.renderer, ...renderer2 };
+  } catch (error) {
+    console.error(`Error rendering model ${renderer2.id}:`, error);
+  }
+};
+var removeModel = (tb, rendererId) => {
+  try {
+    tb.removeByName(rendererId);
+  } catch (error) {
+    console.error(`Error removing model ${rendererId}:`, error);
+  }
+};
+var createRenderersMap = (tb, layerId) => {
+  if (!tb) return /* @__PURE__ */ new Map();
+  const children = tb.world.children.filter((c) => c.layer === layerId);
+  const renderersMap = /* @__PURE__ */ new Map();
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    const modelName = child.name;
+    if (!modelName) continue;
+    renderersMap.set(modelName, child);
+  }
+  return renderersMap;
+};
+
+// src/modules/react-threebox/utils/batch-processor.ts
+var loadModelsBatch = async (tb, batch) => {
+  const promises = batch.map(async (item) => {
+    try {
+      const loaderId = item.loader.id;
+      const model = await loadModel(tb, item.loader);
+      return { model, loaderId };
+    } catch (error) {
+      console.error(`Error loading model ${item.loader.id}:`, error);
+      return null;
+    }
+  });
+  const results = await Promise.all(promises);
+  return results.filter((r) => r !== null);
+};
+var processRemovals = (tb, toRemove) => {
+  toRemove.forEach((rendererId) => {
+    removeModel(tb, rendererId);
+  });
+};
+var processUpdates = (tbChildren, toUpdate) => {
+  toUpdate.forEach((renderer2) => {
+    const existingModel = tbChildren.get(renderer2.id);
+    if (!existingModel) return;
+    renderModel(existingModel, renderer2);
+  });
+};
+var processAdditions = async (tb, loadedBatch, toAdd, layerId) => {
+  const addPromises = loadedBatch.map(async ({ model, loaderId }) => {
+    const loaderData = toAdd.find((item) => item.loader.id === loaderId);
+    if (!loaderData) return;
+    loaderData.renderers.forEach((renderer2) => {
+      const duplicateModel = model.duplicate();
+      renderModel(duplicateModel, renderer2);
+      addModel2(tb, duplicateModel, layerId);
+    });
+  });
+  await Promise.all(addPromises);
+};
+var createBatches = (items, batchSize) => {
+  const batches = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    batches.push(items.slice(i, i + batchSize));
+  }
+  return batches;
+};
+var delay = (ms) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+// src/modules/react-threebox/components/model-batcher.tsx
 var ModelBatcher = ({
-  models,
-  batchSize = 10,
-  batchDelay = 100
+  items,
+  worker = 4,
+  batchSize = 5
 }) => {
-  return models.map((model, loaderIndex) => /* @__PURE__ */ jsx4(
-    BatchedModelLoader,
-    {
-      ...model.loader,
-      batchIndex: loaderIndex,
-      batchSize,
-      batchDelay,
-      children: model.renderers.map((props, renderIndex) => /* @__PURE__ */ jsx4(
-        BatchedModelRenderer,
-        {
-          ...props,
-          batchIndex: renderIndex,
-          batchSize,
-          batchDelay
-        },
-        props.id
-      ))
-    },
-    model.loader.id
-  ));
+  const { threebox, map } = React12.useContext(ThreeboxContext) || {};
+  const { layerId } = React12.useContext(ThreeboxLayerContext) || {};
+  const tb = threebox?.getThreebox();
+  const tbChildren = React12.useMemo(() => {
+    return createRenderersMap(tb, layerId);
+  }, [tb, items, layerId]);
+  useModelWorkerPool(worker);
+  const { toAdd, toRemove, toKeep, toUpdate } = useModelReconciliation({ tbChildren, items });
+  const processItems = React12.useCallback(async () => {
+    if (!tb || !map?.style?._loaded) return;
+    try {
+      processRemovals(tb, toRemove);
+      processUpdates(tbChildren, toUpdate);
+      const batches = createBatches(toAdd, batchSize);
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        const loadedBatch = await loadModelsBatch(tb, batch);
+        await processAdditions(tb, loadedBatch, toAdd, layerId);
+        if (i < batches.length - 1) {
+          await delay(16);
+        }
+      }
+    } catch (error) {
+      console.error("Batch loading error:", error);
+    }
+  }, [tb, map, toAdd, toUpdate, toRemove, batchSize, tbChildren, layerId]);
+  React12.useEffect(() => {
+    processItems();
+  }, [processItems]);
+  React12.useEffect(() => {
+    return () => {
+      if (tb) {
+        toKeep.forEach((rendererId) => {
+          removeModel(tb, rendererId);
+        });
+      }
+    };
+  }, [tb]);
+  return null;
 };
 
 // src/modules/react-threebox/components/model-source.tsx
 import "react";
 import { Source } from "react-map-gl/maplibre";
-import { jsx as jsx5 } from "react/jsx-runtime";
+import { jsx as jsx4 } from "react/jsx-runtime";
 var ModelSource = ({ children, ...props }) => {
-  return /* @__PURE__ */ jsx5(Source, { type: "vector", ...props, children });
+  return /* @__PURE__ */ jsx4(Source, { type: "vector", ...props, children });
 };
 
-// src/modules/react-threebox/components/model-layer.tsx
+// src/modules/react-threebox/components/model-layer-optimize.tsx
 import React14 from "react";
 import { Layer } from "react-map-gl/maplibre";
 
@@ -1750,10 +1805,10 @@ var ModelPropertyEvaluator = class {
 import { createPropertyExpression, isExpression } from "@maplibre/maplibre-gl-style-spec";
 
 // src/utils/use-debounce-callback.ts
-import { useEffect as useEffect11, useRef as useRef8, useCallback as useCallback8 } from "react";
-var useDebounceCallback = (callback, delay) => {
-  const timeoutRef = useRef8(null);
-  const callbackRef = useRef8(callback);
+import { useEffect as useEffect11, useRef as useRef7, useCallback as useCallback7 } from "react";
+var useDebounceCallback = (callback, delay2) => {
+  const timeoutRef = useRef7(null);
+  const callbackRef = useRef7(callback);
   useEffect11(() => {
     callbackRef.current = callback;
   }, [callback]);
@@ -1764,16 +1819,16 @@ var useDebounceCallback = (callback, delay) => {
       }
     };
   }, []);
-  const debouncedCallback = useCallback8(
+  const debouncedCallback = useCallback7(
     (...args) => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
       timeoutRef.current = setTimeout(() => {
         callbackRef.current(...args);
-      }, delay);
+      }, delay2);
     },
-    [delay]
+    [delay2]
   );
   return debouncedCallback;
 };
@@ -1805,8 +1860,7 @@ function diffLayers(prevStyle, newStyle) {
   return { added, removed, changed };
 }
 
-// src/modules/react-threebox/components/model-layer.tsx
-import { jsx as jsx6, jsxs } from "react/jsx-runtime";
+// src/modules/react-threebox/utils/batch-transformer.ts
 var countMeshes = (model) => {
   let meshCount = 0;
   model.traverse((child) => {
@@ -1823,9 +1877,14 @@ var calculateCoordinates = (translation, coords) => {
 };
 var transformLoader = (item) => ({
   id: item.model,
-  type: "glb",
   obj: item.model,
-  scale: { x: item.scale[0], y: item.scale[1], z: item.scale[2] },
+  type: "glb",
+  units: "meters",
+  anchor: "auto",
+  rotation: { x: 90, y: 180, z: 0 },
+  bbox: false,
+  clone: true,
+  scale: 1,
   onLoad: (model) => {
     if (process.env.NODE_ENV === "development") {
       const meshCount = countMeshes(model);
@@ -1835,11 +1894,15 @@ var transformLoader = (item) => ({
 });
 var transformRenderer = (item) => ({
   id: item.id,
+  scale: { x: item.scale[0], y: item.scale[1], z: item.scale[2] },
   coords: calculateCoordinates(item.translation, item.geometry.coordinates),
   rotation: { x: item.rotation[0], y: item.rotation[1], z: item.rotation[2] },
   feature: { type: "Feature", geometry: item.geometry, properties: item.properties },
-  renderingEffect: { duration: 500 }
+  renderingEffect: { duration: 200 }
 });
+
+// src/modules/react-threebox/components/model-layer-optimize.tsx
+import { jsx as jsx5, jsxs } from "react/jsx-runtime";
 var ModelLayer = (props) => {
   const { layout, paint, ...layerProps } = props;
   const { map } = React14.useContext(ThreeboxContext) || {};
@@ -1908,11 +1971,12 @@ var ModelLayer = (props) => {
     map.on("moveend", queryModelsInViewBox);
     map.on("styledata", forceUpdate);
     forceUpdate();
+    queryModelsInViewBox();
     return () => {
       map.off("moveend", queryModelsInViewBox);
       map.off("styledata", forceUpdate);
     };
-  }, [map, forceUpdate, queryModelsInViewBox]);
+  }, [map, evaluator, forceUpdate, queryModelsInViewBox]);
   const modelItems = React14.useMemo(() => {
     if (!modelsInViewBox.length) return [];
     const modelMap = modelsInViewBox.reduce((acc, item) => {
@@ -1927,13 +1991,9 @@ var ModelLayer = (props) => {
     }, /* @__PURE__ */ new Map());
     return Array.from(modelMap.values());
   }, [modelsInViewBox]);
-  const ModelItems = React14.useMemo(() => {
-    if (styleLoaded === 0) return null;
-    return modelItems.map((l) => /* @__PURE__ */ jsx6(ModelLoader, { ...l.loader, children: l.renderers.map((r) => /* @__PURE__ */ jsx6(ModelRenderer, { ...r }, r.id)) }, l.loader.id));
-  }, [modelItems, styleLoaded]);
   return /* @__PURE__ */ jsxs(React14.Fragment, { children: [
-    /* @__PURE__ */ jsx6(Layer, { type: "fill", ...layerProps }),
-    /* @__PURE__ */ jsx6(ThreeboxLayer, { id, beforeId: props.beforeId, children: ModelItems })
+    /* @__PURE__ */ jsx5(Layer, { type: "fill", ...layerProps }),
+    /* @__PURE__ */ jsx5(ThreeboxLayer, { id, beforeId: props.beforeId, children: styleLoaded > 0 && /* @__PURE__ */ jsx5(ModelBatcher, { items: modelItems, worker: 4, batchSize: 10 }) })
   ] });
 };
 
@@ -3498,7 +3558,7 @@ var EffectManager = class {
 };
 
 // src/modules/react-threejs/components/effect-canvas.tsx
-import { jsx as jsx7 } from "react/jsx-runtime";
+import { jsx as jsx6 } from "react/jsx-runtime";
 var EffectCanvasContext = React15.createContext(null);
 var _EffectCanvas = (props, ref) => {
   const { id, mapId, children, onError, onLoad, ...options } = props;
@@ -3553,7 +3613,7 @@ var _EffectCanvas = (props, ref) => {
     }
   }, [options, effectManager]);
   React15.useImperativeHandle(ref, () => contextValue, [effectManager]);
-  return effectManager && /* @__PURE__ */ jsx7(EffectCanvasContext.Provider, { value: contextValue, children });
+  return effectManager && /* @__PURE__ */ jsx6(EffectCanvasContext.Provider, { value: contextValue, children });
 };
 var EffectCanvas = React15.forwardRef(_EffectCanvas);
 
@@ -3620,7 +3680,7 @@ var BloomLine = class extends Line2 {
 };
 
 // src/modules/react-threejs/components/bloom-line.tsx
-import { jsx as jsx8 } from "react/jsx-runtime";
+import { jsx as jsx7 } from "react/jsx-runtime";
 var MeshContext = React16.createContext({ mesh: null });
 var _LineMesh = ({ children }) => {
   const { group, bloom } = React16.useContext(EffectCanvasContext) || {};
@@ -3641,7 +3701,7 @@ var _LineMesh = ({ children }) => {
       }
     };
   }, [mesh, group, bloom]);
-  return /* @__PURE__ */ jsx8(MeshContext.Provider, { value: { mesh }, children });
+  return /* @__PURE__ */ jsx7(MeshContext.Provider, { value: { mesh }, children });
 };
 var _LineGeometry = (props) => {
   const { mesh } = React16.useContext(MeshContext) || {};
@@ -3812,7 +3872,7 @@ var ExtrudeWall = class extends THREE13.Mesh {
 };
 
 // src/modules/react-threejs/components/extrude-wall.tsx
-import { jsx as jsx9 } from "react/jsx-runtime";
+import { jsx as jsx8 } from "react/jsx-runtime";
 var MeshContext2 = React17.createContext({ mesh: null });
 var _WallMesh = ({ children }) => {
   const { group, bloom } = React17.useContext(EffectCanvasContext) || {};
@@ -3833,7 +3893,7 @@ var _WallMesh = ({ children }) => {
       }
     };
   }, [mesh, group, bloom]);
-  return /* @__PURE__ */ jsx9(MeshContext2.Provider, { value: { mesh }, children });
+  return /* @__PURE__ */ jsx8(MeshContext2.Provider, { value: { mesh }, children });
 };
 var _WallGeometry = (props) => {
   const { mesh } = React17.useContext(MeshContext2) || {};
@@ -3899,7 +3959,6 @@ export {
   _WallGeometry as ExtrudeWallGeometry,
   _WallMaterial as ExtrudeWallMaterial,
   LabelRenderer,
-  ModelBatchLoader,
   ModelBatcher,
   ModelLayer,
   ModelLoader,

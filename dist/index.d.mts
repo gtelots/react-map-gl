@@ -302,7 +302,7 @@ type ModelRendererOptions = {
 };
 type ModelBatchItem = {
     /** ModelLoader props */
-    loader: Partial<ModelLoaderOptions>;
+    loader: ModelLoaderOptions;
     /** Array of ModelRenderer props - one loader can render multiple instances */
     renderers: ModelRendererOptions[];
 };
@@ -332,14 +332,6 @@ type ModelRendererProps = ModelRendererOptions & {
 };
 declare const ModelRenderer: React$1.FC<ModelRendererProps>;
 
-interface ModelBatchLoaderProps {
-    items: ModelBatchItem[];
-    batchSize?: number;
-    onComplete?: () => void;
-    onError?: (error: any) => void;
-}
-declare const ModelBatchLoader: React$1.FC<ModelBatchLoaderProps>;
-
 type LabelRendererProps = LabelRendererOptions & {
     model?: any;
     layerId?: string;
@@ -351,9 +343,9 @@ type LabelRendererProps = LabelRendererOptions & {
 declare const LabelRenderer: React$1.FC<LabelRendererProps>;
 
 interface ModelBatcherProps {
-    models: ModelBatchItem[];
+    items: ModelBatchItem[];
+    worker?: number;
     batchSize?: number;
-    batchDelay?: number;
 }
 declare const ModelBatcher: React$1.FC<ModelBatcherProps>;
 
@@ -531,8 +523,8 @@ type ModelSourceProps = ModelSouceSpecification & {
 };
 declare const ModelSource: React__default.FC<ModelSourceProps>;
 
-type ModelLayerProps = ModelLayerSpecification & {};
-declare const ModelLayer: React__default.FC<ModelLayerProps>;
+type ModelLayerProps$1 = ModelLayerSpecification & {};
+declare const ModelLayer: React__default.FC<ModelLayerProps$1>;
 
 type ThreeboxPluginOptions = {
     /** Whether to add some default lighting to the scene. If no lighting added, most objects in the scene will render as black
@@ -640,6 +632,8 @@ type ThreeboxCollection = {
     current?: ThreeboxRef;
 };
 declare const useThreebox: () => ThreeboxCollection;
+
+type ModelLayerProps = ModelLayerSpecification & {};
 
 declare class BloomRenderer {
     private _renderer;
@@ -769,4 +763,4 @@ declare const _WallMesh: React$1.FC<WallMeshProps>;
 declare const _WallGeometry: React$1.FC<ExtrudeWallGeometryParams>;
 declare const _WallMaterial: React$1.FC<ExtrudeWallMaterialParams>;
 
-export { type ArrayPropertySpecification, type BasePropertySpecification, _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, type BooleanPropertySpecification, CustomLayer, type DataDrivenPropertyValueSpecification, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, type EnumPropertySpecification, type ExpressionParameter, type ExpressionSpecification, type ExpressionSpecificationArray, type ExpressionType, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type Feature, type GlobalProperties, LabelRenderer, type LabelRendererOptions, type LabelRendererProps, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatchLoader, type ModelBatchLoaderProps, ModelBatcher, type ModelBatcherProps, type ModelFeatureProperties, ModelLayer, type ModelLayerProps, type ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, type ModelLoaderProps, ModelRenderer, type ModelRendererOptions, type ModelRendererProps, type ModelSouceSpecification, ModelSource, type ModelSourceProps, type ModelTypes, type ModelUnits, type NumberPropertySpecification, PopupAnimation, type PopupAnimationProps, type PropertyValueSpecification, type StringPropertySpecification, type StylePropertySpecification, Threebox, ThreeboxLayer, type ThreeboxLayerProps, type ThreeboxPluginOptions, type ThreeboxProps, ThreeboxProvider, type ThreeboxRef, useLineAnimation, useThreebox };
+export { type ArrayPropertySpecification, type BasePropertySpecification, _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, type BooleanPropertySpecification, CustomLayer, type DataDrivenPropertyValueSpecification, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, type EnumPropertySpecification, type ExpressionParameter, type ExpressionSpecification, type ExpressionSpecificationArray, type ExpressionType, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type Feature, type GlobalProperties, LabelRenderer, type LabelRendererOptions, type LabelRendererProps, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, type ModelBatcherProps, type ModelFeatureProperties, ModelLayer, type ModelLayerProps, type ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, type ModelLoaderProps, ModelRenderer, type ModelRendererOptions, type ModelRendererProps, type ModelSouceSpecification, ModelSource, type ModelSourceProps, type ModelTypes, type ModelUnits, type NumberPropertySpecification, PopupAnimation, type PopupAnimationProps, type PropertyValueSpecification, type StringPropertySpecification, type StylePropertySpecification, Threebox, ThreeboxLayer, type ThreeboxLayerProps, type ThreeboxPluginOptions, type ThreeboxProps, ThreeboxProvider, type ThreeboxRef, useLineAnimation, useThreebox };
