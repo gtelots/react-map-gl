@@ -1431,7 +1431,7 @@ var addModel2 = (tb, model, layerId) => {
     const targetZ = currentScale;
     model.scale.z = originZ;
     tb.add(model, layerId);
-    const duration = 500 / 1e3;
+    const duration = 200 / 1e3;
     const ease = (t) => t;
     gsap2.to(model.scale, { z: targetZ, duration, ease });
   } catch (error) {
