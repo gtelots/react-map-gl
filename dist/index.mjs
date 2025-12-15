@@ -1804,35 +1804,6 @@ var ModelPropertyEvaluator = class {
 // src/modules/react-threebox/style-spec/model-layer-validator.ts
 import { createPropertyExpression, isExpression } from "@maplibre/maplibre-gl-style-spec";
 
-// src/utils/use-debounce-callback.ts
-import { useEffect as useEffect11, useRef as useRef7, useCallback as useCallback7 } from "react";
-var useDebounceCallback = (callback, delay2) => {
-  const timeoutRef = useRef7(null);
-  const callbackRef = useRef7(callback);
-  useEffect11(() => {
-    callbackRef.current = callback;
-  }, [callback]);
-  useEffect11(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-  const debouncedCallback = useCallback7(
-    (...args) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      timeoutRef.current = setTimeout(() => {
-        callbackRef.current(...args);
-      }, delay2);
-    },
-    [delay2]
-  );
-  return debouncedCallback;
-};
-
 // src/utils/deep-layers.ts
 function diffLayers(prevStyle, newStyle) {
   const prevLayers = prevStyle?.layers || [];
@@ -1909,7 +1880,8 @@ var ModelLayer = (props) => {
   const id = React14.useMemo(() => props.id ? `threebox-${props.id}` : "", []);
   const [styleLoaded, setStyleLoaded] = React14.useState(0);
   const [modelsInViewBox, setModelsInViewBox] = React14.useState([]);
-  const previousStyle = React14.useRef({});
+  const prevStyle = React14.useRef({});
+  const prevProps = React14.useRef(props);
   const evaluator = React14.useMemo(() => {
     return new ModelPropertyEvaluator(layout, paint);
   }, [layout, paint]);
@@ -1943,40 +1915,38 @@ var ModelLayer = (props) => {
     },
     [map, processFeature]
   );
-  const queryModelsInViewBox = useDebounceCallback(
-    React14.useCallback(() => {
-      if (!map) return;
-      const features = map.queryRenderedFeatures({ layers: [props.id] });
-      const processedFeatures = processFeatures(features);
-      const visibleModels = processedFeatures.reduce((acc, item) => {
-        if (!acc.has(item.id) && item.visible) acc.set(item.id, item);
-        return acc;
-      }, /* @__PURE__ */ new Map());
-      setModelsInViewBox(Array.from(visibleModels.values()));
-    }, [map, props.id, processFeatures]),
-    500
-  );
+  const queryModelsInViewBox = React14.useCallback(() => {
+    if (!map) return;
+    const features = map.queryRenderedFeatures({ layers: [props.id] });
+    const processedFeatures = processFeatures(features);
+    const visibleModels = processedFeatures.reduce((acc, item) => {
+      if (!acc.has(item.id) && item.visible) acc.set(item.id, item);
+      return acc;
+    }, /* @__PURE__ */ new Map());
+    setModelsInViewBox(Array.from(visibleModels.values()));
+  }, [map, props.id, processFeatures]);
   const forceUpdate = React14.useCallback(() => {
     if (!map) return;
     const newStyle = map.getStyle();
-    const { added, changed } = diffLayers(previousStyle.current, newStyle);
-    if (added.includes(props.id) || changed.includes(props.id)) {
-      setTimeout(queryModelsInViewBox);
+    const { added, changed } = diffLayers(prevStyle.current, newStyle);
+    const isDiffProps = !deepEqual(prevProps.current, props);
+    if (added.includes(props.id) || changed.includes(props.id) || isDiffProps) {
+      setTimeout(queryModelsInViewBox, 500);
       setStyleLoaded((version) => version + 1);
     }
-    previousStyle.current = newStyle;
+    prevStyle.current = newStyle;
+    prevProps.current = props;
   }, [map, props.id, queryModelsInViewBox]);
   React14.useEffect(() => {
     if (!map) return;
     map.on("moveend", queryModelsInViewBox);
     map.on("styledata", forceUpdate);
     forceUpdate();
-    queryModelsInViewBox();
     return () => {
       map.off("moveend", queryModelsInViewBox);
       map.off("styledata", forceUpdate);
     };
-  }, [map, evaluator, forceUpdate, queryModelsInViewBox]);
+  }, [map, forceUpdate, queryModelsInViewBox]);
   const modelItems = React14.useMemo(() => {
     if (!modelsInViewBox.length) return [];
     const modelMap = modelsInViewBox.reduce((acc, item) => {

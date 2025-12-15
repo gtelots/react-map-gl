@@ -1640,7 +1640,7 @@ var ModelSource = ({ children, ...props }) => {
 };
 
 // src/modules/react-threebox/components/model-layer-optimize.tsx
-var import_react5 = __toESM(require("react"));
+var import_react4 = __toESM(require("react"));
 var import_maplibre5 = require("react-map-gl/maplibre");
 
 // src/modules/react-threebox/style-spec/model-layer-properties.ts
@@ -1858,35 +1858,6 @@ var ModelPropertyEvaluator = class {
 // src/modules/react-threebox/style-spec/model-layer-validator.ts
 var import_maplibre_gl_style_spec2 = require("@maplibre/maplibre-gl-style-spec");
 
-// src/utils/use-debounce-callback.ts
-var import_react4 = require("react");
-var useDebounceCallback = (callback, delay2) => {
-  const timeoutRef = (0, import_react4.useRef)(null);
-  const callbackRef = (0, import_react4.useRef)(callback);
-  (0, import_react4.useEffect)(() => {
-    callbackRef.current = callback;
-  }, [callback]);
-  (0, import_react4.useEffect)(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-  const debouncedCallback = (0, import_react4.useCallback)(
-    (...args) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      timeoutRef.current = setTimeout(() => {
-        callbackRef.current(...args);
-      }, delay2);
-    },
-    [delay2]
-  );
-  return debouncedCallback;
-};
-
 // src/utils/deep-layers.ts
 function diffLayers(prevStyle, newStyle) {
   const prevLayers = prevStyle?.layers || [];
@@ -1959,15 +1930,16 @@ var transformRenderer = (item) => ({
 var import_jsx_runtime5 = require("react/jsx-runtime");
 var ModelLayer = (props) => {
   const { layout, paint, ...layerProps } = props;
-  const { map } = import_react5.default.useContext(ThreeboxContext) || {};
-  const id = import_react5.default.useMemo(() => props.id ? `threebox-${props.id}` : "", []);
-  const [styleLoaded, setStyleLoaded] = import_react5.default.useState(0);
-  const [modelsInViewBox, setModelsInViewBox] = import_react5.default.useState([]);
-  const previousStyle = import_react5.default.useRef({});
-  const evaluator = import_react5.default.useMemo(() => {
+  const { map } = import_react4.default.useContext(ThreeboxContext) || {};
+  const id = import_react4.default.useMemo(() => props.id ? `threebox-${props.id}` : "", []);
+  const [styleLoaded, setStyleLoaded] = import_react4.default.useState(0);
+  const [modelsInViewBox, setModelsInViewBox] = import_react4.default.useState([]);
+  const prevStyle = import_react4.default.useRef({});
+  const prevProps = import_react4.default.useRef(props);
+  const evaluator = import_react4.default.useMemo(() => {
     return new ModelPropertyEvaluator(layout, paint);
   }, [layout, paint]);
-  const processFeature = import_react5.default.useCallback(
+  const processFeature = import_react4.default.useCallback(
     (feature, global) => {
       const layoutProps = evaluator.evaluateLayout(global, feature);
       const paintProps = evaluator.evaluatePaint(global, feature);
@@ -1987,7 +1959,7 @@ var ModelLayer = (props) => {
     },
     [evaluator]
   );
-  const processFeatures = import_react5.default.useCallback(
+  const processFeatures = import_react4.default.useCallback(
     (features) => {
       if (!map) return [];
       const zoom = map.getZoom();
@@ -1997,41 +1969,39 @@ var ModelLayer = (props) => {
     },
     [map, processFeature]
   );
-  const queryModelsInViewBox = useDebounceCallback(
-    import_react5.default.useCallback(() => {
-      if (!map) return;
-      const features = map.queryRenderedFeatures({ layers: [props.id] });
-      const processedFeatures = processFeatures(features);
-      const visibleModels = processedFeatures.reduce((acc, item) => {
-        if (!acc.has(item.id) && item.visible) acc.set(item.id, item);
-        return acc;
-      }, /* @__PURE__ */ new Map());
-      setModelsInViewBox(Array.from(visibleModels.values()));
-    }, [map, props.id, processFeatures]),
-    500
-  );
-  const forceUpdate = import_react5.default.useCallback(() => {
+  const queryModelsInViewBox = import_react4.default.useCallback(() => {
+    if (!map) return;
+    const features = map.queryRenderedFeatures({ layers: [props.id] });
+    const processedFeatures = processFeatures(features);
+    const visibleModels = processedFeatures.reduce((acc, item) => {
+      if (!acc.has(item.id) && item.visible) acc.set(item.id, item);
+      return acc;
+    }, /* @__PURE__ */ new Map());
+    setModelsInViewBox(Array.from(visibleModels.values()));
+  }, [map, props.id, processFeatures]);
+  const forceUpdate = import_react4.default.useCallback(() => {
     if (!map) return;
     const newStyle = map.getStyle();
-    const { added, changed } = diffLayers(previousStyle.current, newStyle);
-    if (added.includes(props.id) || changed.includes(props.id)) {
-      setTimeout(queryModelsInViewBox);
+    const { added, changed } = diffLayers(prevStyle.current, newStyle);
+    const isDiffProps = !deepEqual(prevProps.current, props);
+    if (added.includes(props.id) || changed.includes(props.id) || isDiffProps) {
+      setTimeout(queryModelsInViewBox, 500);
       setStyleLoaded((version) => version + 1);
     }
-    previousStyle.current = newStyle;
+    prevStyle.current = newStyle;
+    prevProps.current = props;
   }, [map, props.id, queryModelsInViewBox]);
-  import_react5.default.useEffect(() => {
+  import_react4.default.useEffect(() => {
     if (!map) return;
     map.on("moveend", queryModelsInViewBox);
     map.on("styledata", forceUpdate);
     forceUpdate();
-    queryModelsInViewBox();
     return () => {
       map.off("moveend", queryModelsInViewBox);
       map.off("styledata", forceUpdate);
     };
-  }, [map, evaluator, forceUpdate, queryModelsInViewBox]);
-  const modelItems = import_react5.default.useMemo(() => {
+  }, [map, forceUpdate, queryModelsInViewBox]);
+  const modelItems = import_react4.default.useMemo(() => {
     if (!modelsInViewBox.length) return [];
     const modelMap = modelsInViewBox.reduce((acc, item) => {
       const renderer2 = transformRenderer(item);
@@ -2045,7 +2015,7 @@ var ModelLayer = (props) => {
     }, /* @__PURE__ */ new Map());
     return Array.from(modelMap.values());
   }, [modelsInViewBox]);
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_react5.default.Fragment, { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_react4.default.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_maplibre5.Layer, { type: "fill", ...layerProps }),
     /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(ThreeboxLayer, { id, beforeId: props.beforeId, children: styleLoaded > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(ModelBatcher, { items: modelItems, worker: 4, batchSize: 10 }) })
   ] });
