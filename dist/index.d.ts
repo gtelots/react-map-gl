@@ -3,7 +3,7 @@ export * from 'react-map-gl/maplibre';
 import * as React$1 from 'react';
 import React__default from 'react';
 import * as maplibre_gl from 'maplibre-gl';
-import { CustomLayerInterface, Popup, Map, PopupOptions, FilterSpecification } from 'maplibre-gl';
+import { CustomLayerInterface, Popup, Map, PopupOptions, FilterSpecification, MapGeoJSONFeature } from 'maplibre-gl';
 export { CustomLayerInterface as CustomLayerOptions, CustomRenderMethodInput as CustomRenderOptions, Map as MapboxInstance } from 'maplibre-gl';
 import * as react_map_gl_dist_esm_exports_maplibre from 'react-map-gl/dist/esm/exports-maplibre';
 import { Position, Feature as Feature$1, Point } from 'geojson';
@@ -523,8 +523,8 @@ type ModelSourceProps = ModelSouceSpecification & {
 };
 declare const ModelSource: React__default.FC<ModelSourceProps>;
 
-type ModelLayerProps$1 = ModelLayerSpecification & {};
-declare const ModelLayer: React__default.FC<ModelLayerProps$1>;
+type ModelLayerProps = ModelLayerSpecification & {};
+declare const ModelLayer: React__default.FC<ModelLayerProps>;
 
 type ThreeboxPluginOptions = {
     /** Whether to add some default lighting to the scene. If no lighting added, most objects in the scene will render as black
@@ -633,7 +633,38 @@ type ThreeboxCollection = {
 };
 declare const useThreebox: () => ThreeboxCollection;
 
-type ModelLayerProps = ModelLayerSpecification & {};
+interface OptimizedFeaturesOptions {
+    /**
+     * Pitch threshold to activate optimization (default: 60)
+     */
+    pitchThreshold?: number;
+    /**
+     * Target pitch for calculating the effective viewport (default: 60)
+     */
+    targetPitch?: number;
+}
+/**
+ * Optimizes feature list based on camera pitch to improve rendering performance
+ *
+ * When pitch >= pitchThreshold, this hook filters features to only include those
+ * within the visible screen rect equivalent to the targetPitch viewport. This
+ * eliminates features in the far distance that are heavily compressed and barely
+ * visible, reducing rendering overhead.
+ *
+ * The optimization works by:
+ * 1. Projecting geographic coordinates to screen space
+ * 2. Calculating visible rect based on pitch compression using mathematical formulas
+ * 3. Filtering out features outside the effective visible area
+ *
+ * This approach handles camera rotation (bearing) correctly since it operates
+ * in screen space rather than using geographic bounds (NSEW).
+ *
+ * @param map - MapLibre map instance
+ * @param features - Original feature list
+ * @param options - Configuration options
+ * @returns Optimized feature list
+ */
+declare function useOptimizedFeatures(map: Map | undefined, features: MapGeoJSONFeature[], { pitchThreshold, targetPitch }?: OptimizedFeaturesOptions): MapGeoJSONFeature[];
 
 declare class BloomRenderer {
     private _renderer;
@@ -763,4 +794,4 @@ declare const _WallMesh: React$1.FC<WallMeshProps>;
 declare const _WallGeometry: React$1.FC<ExtrudeWallGeometryParams>;
 declare const _WallMaterial: React$1.FC<ExtrudeWallMaterialParams>;
 
-export { type ArrayPropertySpecification, type BasePropertySpecification, _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, type BooleanPropertySpecification, CustomLayer, type DataDrivenPropertyValueSpecification, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, type EnumPropertySpecification, type ExpressionParameter, type ExpressionSpecification, type ExpressionSpecificationArray, type ExpressionType, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type Feature, type GlobalProperties, LabelRenderer, type LabelRendererOptions, type LabelRendererProps, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, type ModelBatcherProps, type ModelFeatureProperties, ModelLayer, type ModelLayerProps, type ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, type ModelLoaderProps, ModelRenderer, type ModelRendererOptions, type ModelRendererProps, type ModelSouceSpecification, ModelSource, type ModelSourceProps, type ModelTypes, type ModelUnits, type NumberPropertySpecification, PopupAnimation, type PopupAnimationProps, type PropertyValueSpecification, type StringPropertySpecification, type StylePropertySpecification, Threebox, ThreeboxLayer, type ThreeboxLayerProps, type ThreeboxPluginOptions, type ThreeboxProps, ThreeboxProvider, type ThreeboxRef, useLineAnimation, useThreebox };
+export { type ArrayPropertySpecification, type BasePropertySpecification, _LineMesh as BloomLine, _LineGeometry as BloomLineGeometry, type BloomLineGeometryParams, _LineMaterial as BloomLineMaterial, type BloomLineMaterialParams, type BooleanPropertySpecification, CustomLayer, type DataDrivenPropertyValueSpecification, EffectCanvas, type EffectCanvasContext, type EffectCanvasParams, type EffectManagerContext, type EnumPropertySpecification, type ExpressionParameter, type ExpressionSpecification, type ExpressionSpecificationArray, type ExpressionType, _WallMesh as ExtrudeWall, _WallGeometry as ExtrudeWallGeometry, type ExtrudeWallGeometryParams, _WallMaterial as ExtrudeWallMaterial, type ExtrudeWallMaterialParams, type Feature, type GlobalProperties, LabelRenderer, type LabelRendererOptions, type LabelRendererProps, type MixPassMaterialParams, type ModelAnchors, type ModelBatchItem, ModelBatcher, type ModelBatcherProps, type ModelFeatureProperties, ModelLayer, type ModelLayerProps, type ModelLayerSpecification, ModelLoader, type ModelLoaderOptions, type ModelLoaderProps, ModelRenderer, type ModelRendererOptions, type ModelRendererProps, type ModelSouceSpecification, ModelSource, type ModelSourceProps, type ModelTypes, type ModelUnits, type NumberPropertySpecification, PopupAnimation, type PopupAnimationProps, type PropertyValueSpecification, type StringPropertySpecification, type StylePropertySpecification, Threebox, ThreeboxLayer, type ThreeboxLayerProps, type ThreeboxPluginOptions, type ThreeboxProps, ThreeboxProvider, type ThreeboxRef, useLineAnimation, useOptimizedFeatures, useThreebox };
