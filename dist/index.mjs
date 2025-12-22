@@ -1414,7 +1414,7 @@ var useModelWorkerPool = (poolSize = 4) => {
 
 // src/modules/react-threebox/utils/model-operations.ts
 import { gsap as gsap2 } from "gsap";
-var getModel = async (tb, id) => {
+var getModel = (tb, id) => {
   try {
     const model = tb.world.children.find((m) => m.name === id);
     return model;
@@ -1490,23 +1490,34 @@ var createRenderersMap = (tb, layerId) => {
 };
 
 // src/modules/react-threebox/utils/batch-processor.ts
-var loadAndAddModelsBatch = async (tb, batch, layerId) => {
-  const promises = batch.map(async (item) => {
+var loadAndAddModels = async (tb, items, batchSize, layerId) => {
+  const promises = items.map(async (item) => {
     try {
       const model = await loadModel(tb, item.loader);
-      const rendererPromises = item.renderers.map(async (renderer2) => {
-        const existingModel = await getModel(tb, renderer2.id);
-        if (existingModel) return;
-        const duplicateModel = model.duplicate();
-        renderModel(duplicateModel, renderer2);
-        addModel2(tb, duplicateModel, layerId);
-      });
-      await Promise.all(rendererPromises);
+      const batches = createBatches(item.renderers, batchSize);
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        processAdditionals(tb, model, batch, layerId);
+        await delay(16);
+      }
     } catch (error) {
       console.error(`Error loading model ${item.loader.id}:`, error);
     }
   });
   await Promise.all(promises);
+};
+var processAdditionals = (tb, model, renderers, layerId) => {
+  renderers.forEach((renderer2) => {
+    try {
+      const existingModel = getModel(tb, renderer2.id);
+      if (existingModel) return;
+      const duplicateModel = model.duplicate();
+      renderModel(duplicateModel, renderer2);
+      addModel2(tb, duplicateModel, layerId);
+    } catch (error) {
+      console.error(`Error adding model ${renderer2.id}:`, error);
+    }
+  });
 };
 var processRemovals = (tb, toRemove) => {
   toRemove.forEach((rendererId) => {
@@ -1526,6 +1537,9 @@ var createBatches = (items, batchSize) => {
     batches.push(items.slice(i, i + batchSize));
   }
   return batches;
+};
+var delay = (ms) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 // src/modules/react-threebox/components/model-batcher.tsx
@@ -1547,11 +1561,7 @@ var ModelBatcher = ({
     try {
       processRemovals(tb, toRemove);
       processUpdates(tbChildren, toUpdate);
-      const batches = createBatches(toAdd, batchSize);
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        await loadAndAddModelsBatch(tb, batch, layerId);
-      }
+      await loadAndAddModels(tb, toAdd, batchSize, layerId);
     } catch (error) {
       console.error("Batch loading error:", error);
     }
@@ -1872,7 +1882,7 @@ var ModelLayer = (props) => {
   const { layout, paint, ...layerProps } = props;
   const { map } = React14.useContext(ThreeboxContext) || {};
   const id = React14.useMemo(() => props.id ? `threebox-${props.id}` : "", []);
-  const [styleLoaded, setStyleLoaded] = React14.useState(0);
+  const [, setStyleLoaded] = React14.useState(0);
   const [modelsInViewBox, setModelsInViewBox] = React14.useState([]);
   const prevStyle = React14.useRef({});
   const prevProps = React14.useRef(props);
@@ -1956,7 +1966,7 @@ var ModelLayer = (props) => {
   }, [modelsInViewBox]);
   return /* @__PURE__ */ jsxs(React14.Fragment, { children: [
     /* @__PURE__ */ jsx5(Layer, { type: "fill", ...layerProps }),
-    /* @__PURE__ */ jsx5(ThreeboxLayer, { id, beforeId: props.beforeId, children: styleLoaded > 0 && /* @__PURE__ */ jsx5(ModelBatcher, { items: modelItems, worker: 16, batchSize: 100 }) })
+    /* @__PURE__ */ jsx5(ThreeboxLayer, { id, beforeId: props.beforeId, children: /* @__PURE__ */ jsx5(ModelBatcher, { items: modelItems, worker: 8, batchSize: 10 }) })
   ] });
 };
 
